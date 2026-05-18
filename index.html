@@ -1,0 +1,1444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bonito Designs — NPS Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,800&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --ink: #0f0e0c;
+    --paper: #f4ede0;
+    --paper-2: #ede4d3;
+    --line: #1a1815;
+    --muted: #6b6356;
+    --accent: #c2410c;       /* burnt orange */
+    --accent-2: #1e3a2f;     /* deep forest */
+    --gold: #b8860b;
+    --promoter: #2d5d3a;
+    --passive: #b8860b;
+    --detractor: #a8341c;
+    --shadow: 0 1px 0 rgba(15,14,12,0.06), 0 8px 24px -8px rgba(15,14,12,0.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--paper); color: var(--ink); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; padding: 32px 28px 80px; }
+
+  /* MASTHEAD */
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 18px; margin-bottom: 32px; position: relative; }
+  .masthead-top { display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 14px; }
+  .masthead-top .meta { display: flex; gap: 24px; }
+  .masthead-top .meta span:before { content: '·'; margin-right: 8px; color: var(--accent); }
+  .masthead-top .meta span:first-child:before { content: ''; margin: 0; }
+  h1.title { font-family: 'Fraunces', serif; font-weight: 600; font-size: clamp(40px, 6vw, 84px); line-height: 0.92; letter-spacing: -0.03em; font-style: italic; }
+  h1.title em { font-style: normal; font-weight: 300; color: var(--accent); }
+  .tagline { font-family: 'Fraunces', serif; font-style: italic; color: var(--muted); margin-top: 10px; font-size: 16px; }
+
+  /* CONTROLS */
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0 28px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--ink); background: var(--paper); border-radius: 0; overflow: hidden; }
+  .seg button { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 9px 16px; background: transparent; border: none; color: var(--ink); cursor: pointer; border-right: 1px solid var(--ink); transition: all 0.15s; }
+  .seg button:last-child { border-right: none; }
+  .seg button.active { background: var(--ink); color: var(--paper); }
+  .seg button:hover:not(.active) { background: rgba(15,14,12,0.06); }
+  select.filter { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 9px 14px; background: var(--paper); border: 1px solid var(--ink); color: var(--ink); cursor: pointer; border-radius: 0; appearance: none; -webkit-appearance: none; padding-right: 30px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%230f0e0c' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; }
+  .ghost { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 9px 14px; background: transparent; border: 1px solid var(--ink); color: var(--ink); cursor: pointer; }
+  .ghost:hover { background: var(--ink); color: var(--paper); }
+  .ghost.primary { background: var(--ink); color: var(--paper); }
+  .ghost.primary:hover { background: var(--accent); border-color: var(--accent); }
+
+  /* SECTION HEADERS */
+  .section-head { display: flex; align-items: baseline; gap: 16px; margin: 44px 0 18px; }
+  .section-head .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.15em; }
+  .section-head h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 28px; letter-spacing: -0.01em; }
+  .section-head .rule { flex: 1; height: 1px; background: var(--ink); opacity: 0.2; }
+  .section-head .hint { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* KPI GRID */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); margin-bottom: 8px; }
+  .kpi { background: var(--paper); padding: 22px 22px 24px; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); position: relative; min-height: 168px; display: flex; flex-direction: column; justify-content: space-between; }
+  .kpi.featured { background: var(--ink); color: var(--paper); }
+  .kpi.featured .kpi-label, .kpi.featured .kpi-sub { color: var(--paper-2); opacity: 0.7; }
+  .kpi-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+  .kpi-value { font-family: 'Fraunces', serif; font-weight: 400; font-size: 56px; line-height: 1; letter-spacing: -0.025em; margin-top: 14px; }
+  .kpi-value .unit { font-size: 22px; color: var(--muted); margin-left: 4px; font-style: italic; }
+  .kpi.featured .kpi-value .unit { color: var(--paper-2); }
+  .kpi-sub { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 12px; letter-spacing: 0.02em; }
+  .delta { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; border-radius: 2px; font-weight: 600; font-size: 11px; margin-left: 8px; }
+  .delta.up { background: rgba(45,93,58,0.12); color: var(--promoter); }
+  .delta.down { background: rgba(168,52,28,0.12); color: var(--detractor); }
+  .delta.flat { background: rgba(107,99,86,0.12); color: var(--muted); }
+  .kpi.featured .delta.up { background: rgba(140,200,150,0.2); color: #a7d4b1; }
+  .kpi.featured .delta.down { background: rgba(230,140,120,0.2); color: #e6a597; }
+  .kpi.featured .delta.flat { background: rgba(244,237,224,0.15); color: var(--paper-2); }
+
+  /* CHART CARDS */
+  .charts-row { display: grid; grid-template-columns: 1.6fr 1fr; gap: 24px; margin-bottom: 8px; }
+  .chart-card { background: var(--paper); border: 1px solid var(--ink); padding: 22px; }
+  .chart-card h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; margin-bottom: 4px; }
+  .chart-card .chart-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 18px; }
+  .chart-wrap { height: 280px; position: relative; }
+  .chart-wrap.tall { height: 340px; }
+
+  /* TABLES */
+  .table-card { background: var(--paper); border: 1px solid var(--ink); margin-bottom: 8px; }
+  .table-head { padding: 18px 22px; border-bottom: 1px solid var(--ink); display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 12px; }
+  .table-head h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 20px; }
+  .table-head .meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data thead { background: var(--paper-2); }
+  table.data th { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 12px 16px; text-align: left; font-weight: 500; border-bottom: 1px solid var(--ink); cursor: pointer; user-select: none; }
+  table.data th:hover { color: var(--ink); }
+  table.data th.num, table.data td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'JetBrains Mono', monospace; }
+  table.data td { padding: 13px 16px; border-bottom: 1px solid rgba(15,14,12,0.08); }
+  table.data tr:hover { background: rgba(15,14,12,0.03); }
+  table.data .name { font-weight: 500; }
+  .badge { display: inline-block; padding: 2px 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.05em; border-radius: 2px; }
+  .badge-promoter { background: rgba(45,93,58,0.15); color: var(--promoter); }
+  .badge-passive { background: rgba(184,134,11,0.15); color: var(--passive); }
+  .badge-detractor { background: rgba(168,52,28,0.15); color: var(--detractor); }
+  .bar-cell { display: flex; align-items: center; gap: 10px; }
+  .bar-track { flex: 1; height: 6px; background: var(--paper-2); position: relative; max-width: 140px; }
+  .bar-fill { position: absolute; top: 0; left: 0; height: 100%; background: var(--ink); }
+  .bar-fill.good { background: var(--promoter); }
+  .bar-fill.warn { background: var(--passive); }
+  .bar-fill.bad { background: var(--detractor); }
+
+  /* DETRACTORS */
+  .detractor-list { max-height: 520px; overflow-y: auto; }
+  .detractor-item { padding: 18px 22px; border-bottom: 1px solid rgba(15,14,12,0.08); }
+  .detractor-item:last-child { border-bottom: none; }
+  .det-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; gap: 12px; flex-wrap: wrap; }
+  .det-customer { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; }
+  .det-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); }
+  .det-score { font-family: 'JetBrains Mono', monospace; font-weight: 600; padding: 2px 9px; border-radius: 2px; font-size: 12px; }
+  .det-score.s-detractor { background: var(--detractor); color: var(--paper); }
+  .det-score.s-disappointed { background: var(--detractor); color: var(--paper); }
+  .det-comment { font-family: 'Fraunces', serif; font-size: 14px; line-height: 1.55; color: var(--ink); margin-top: 8px; font-style: italic; opacity: 0.85; }
+  .det-comment:before { content: '"'; font-size: 24px; color: var(--accent); margin-right: 2px; vertical-align: -4px; }
+
+  /* SCATTER */
+  .scatter-wrap { height: 380px; position: relative; }
+
+  /* LOADING + EMPTY */
+  .loading { text-align: center; padding: 80px 20px; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+  .loading .dot { display: inline-block; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; margin: 0 2px; animation: pulse 1.4s infinite; }
+  .loading .dot:nth-child(2) { animation-delay: 0.2s; }
+  .loading .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+  .empty { padding: 40px; text-align: center; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* TABS */
+  .tab-bar { display: flex; border-bottom: 2px solid var(--ink); margin-bottom: 24px; gap: 0; flex-wrap: wrap; }
+  .tab-bar button { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500; padding: 12px 22px 14px; background: transparent; border: none; cursor: pointer; color: var(--muted); position: relative; transition: color 0.15s; letter-spacing: -0.01em; }
+  .tab-bar button.active { color: var(--ink); }
+  .tab-bar button.active:after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: var(--accent); }
+  .tab-bar button:hover { color: var(--ink); }
+  .tab-bar .count { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-left: 6px; font-weight: 400; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* RESPONSIVE */
+  @media (max-width: 1024px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .charts-row { grid-template-columns: 1fr; }
+    .kpi-value { font-size: 44px; }
+  }
+  @media (max-width: 640px) {
+    body { padding: 20px 16px 60px; }
+    .kpi-grid { grid-template-columns: 1fr; }
+    h1.title { font-size: 44px; }
+    .masthead-top { flex-direction: column; gap: 6px; align-items: flex-start; }
+  }
+
+  /* SCROLLBARS */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--paper-2); }
+  ::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 0; }
+
+  /* FORTNIGHT CARDS */
+  .fn-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--ink); }
+  .fn-cell { padding: 20px; border-right: 1px solid var(--ink); position: relative; }
+  .fn-cell:last-child { border-right: none; }
+  .fn-cell .fn-period { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+  .fn-cell .fn-label { font-family: 'Fraunces', serif; font-size: 15px; font-style: italic; color: var(--muted); margin-bottom: 16px; }
+  .fn-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; }
+  .fn-m { }
+  .fn-m .v { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1; }
+  .fn-m .l { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+  @media (max-width: 1024px) { .fn-grid { grid-template-columns: 1fr; } .fn-cell { border-right: none; border-bottom: 1px solid var(--ink); } .fn-cell:last-child { border-bottom: none; } }
+
+  .note { font-family: 'Fraunces', serif; font-style: italic; color: var(--muted); font-size: 13px; padding: 12px 16px; background: rgba(194,65,12,0.05); border-left: 2px solid var(--accent); margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-top">
+    <div class="meta">
+      <span>Vol. I</span>
+      <span id="todayDate">—</span>
+      <span>Bonito Designs</span>
+    </div>
+    <div class="meta">
+      <span>Material &amp; Customer Experience</span>
+    </div>
+  </div>
+  <h1 class="title">NPS <em>Intelligence</em></h1>
+  <p class="tagline">A fortnightly account of how our customers feel — and how often they tell us.</p>
+</header>
+
+<div class="controls">
+  <div class="seg" role="tablist">
+    <button class="active" data-window="12">12 Mo</button>
+    <button data-window="6">6 Mo</button>
+    <button data-window="3">3 Mo</button>
+    <button data-window="all">All Time</button>
+  </div>
+  <select class="filter" id="branchFilter">
+    <option value="all">All Branches</option>
+  </select>
+  <button class="ghost" id="refreshBtn">↻ Refresh Data</button>
+  <button class="ghost primary" id="exportBtn">↓ Export Detractors</button>
+  <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase;" id="dataSource">Loading data…</span>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <button class="active" data-tab="overview">Overview</button>
+  <button data-tab="final">Overall NPS <span class="count" id="finalCount"></span></button>
+  <button data-tab="design">Design NPS <span class="count" id="designCount"></span></button>
+  <button data-tab="fortnight">Fortnight Review</button>
+  <button data-tab="people">People</button>
+  <button data-tab="detractors">Detractors</button>
+  <button data-tab="correlation">Value × NPS</button>
+</div>
+
+<div id="loadingPane" class="loading">
+  Loading NPS data <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+</div>
+
+<!-- OVERVIEW TAB -->
+<section class="tab-panel" id="tab-overview">
+
+  <div class="section-head">
+    <span class="num">01</span>
+    <h2>Headline KPIs</h2>
+    <div class="rule"></div>
+    <span class="hint">vs previous fortnight</span>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi featured">
+      <div>
+        <div class="kpi-label">Overall NPS Score</div>
+        <div class="kpi-value" id="kpi-nps">—</div>
+      </div>
+      <div class="kpi-sub" id="kpi-nps-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div>
+        <div class="kpi-label">Design CSAT</div>
+        <div class="kpi-value" id="kpi-csat">—<span class="unit">%</span></div>
+      </div>
+      <div class="kpi-sub" id="kpi-csat-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div>
+        <div class="kpi-label">Final Fill Rate</div>
+        <div class="kpi-value" id="kpi-fill-final">—<span class="unit">%</span></div>
+      </div>
+      <div class="kpi-sub" id="kpi-fill-final-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div>
+        <div class="kpi-label">Design Fill Rate</div>
+        <div class="kpi-value" id="kpi-fill-design">—<span class="unit">%</span></div>
+      </div>
+      <div class="kpi-sub" id="kpi-fill-design-sub">—</div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <span class="num">02</span>
+    <h2>The Story Month-on-Month</h2>
+    <div class="rule"></div>
+    <span class="hint">trend × volume</span>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>NPS Score Trajectory</h3>
+      <div class="chart-sub">Overall NPS · monthly</div>
+      <div class="chart-wrap tall"><canvas id="chart-nps-trend"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Fill Rate</h3>
+      <div class="chart-sub">% of eligible PIDs responded</div>
+      <div class="chart-wrap tall"><canvas id="chart-fill-trend"></canvas></div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Promoter / Passive / Detractor Mix</h3>
+      <div class="chart-sub">Stacked monthly — Overall NPS</div>
+      <div class="chart-wrap tall"><canvas id="chart-ppd"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Design Satisfaction Mix</h3>
+      <div class="chart-sub">5-point scale distribution</div>
+      <div class="chart-wrap tall"><canvas id="chart-design-mix"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-head">
+    <span class="num">03</span>
+    <h2>Branches, Ranked</h2>
+    <div class="rule"></div>
+    <span class="hint">last 12 months</span>
+  </div>
+
+  <div class="table-card">
+    <div class="table-head">
+      <h3>Experience Centre Performance</h3>
+      <span class="meta">click columns to sort</span>
+    </div>
+    <table class="data" id="branch-table">
+      <thead>
+        <tr>
+          <th>Branch</th>
+          <th class="num">Responses</th>
+          <th class="num">Promoters</th>
+          <th class="num">Passives</th>
+          <th class="num">Detractors</th>
+          <th class="num">NPS</th>
+          <th class="num">Avg Score</th>
+          <th class="num">Fill Rate</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+</section>
+
+<!-- FINAL NPS TAB -->
+<section class="tab-panel" id="tab-final">
+  <div class="section-head"><span class="num">A</span><h2>Overall NPS — Deep Dive</h2><div class="rule"></div></div>
+
+  <div class="kpi-grid">
+    <div class="kpi featured">
+      <div><div class="kpi-label">NPS Score</div><div class="kpi-value" id="f-nps">—</div></div>
+      <div class="kpi-sub">in selected window</div>
+    </div>
+    <div class="kpi">
+      <div><div class="kpi-label">Promoters</div><div class="kpi-value" id="f-prom">—</div></div>
+      <div class="kpi-sub" id="f-prom-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div><div class="kpi-label">Passives</div><div class="kpi-value" id="f-pass">—</div></div>
+      <div class="kpi-sub" id="f-pass-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div><div class="kpi-label">Detractors</div><div class="kpi-value" id="f-det">—</div></div>
+      <div class="kpi-sub" id="f-det-sub">—</div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Score Distribution</h3>
+      <div class="chart-sub">0–10 scale histogram</div>
+      <div class="chart-wrap tall"><canvas id="chart-final-hist"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Sub-Category Averages</h3>
+      <div class="chart-sub">satisfaction across attributes</div>
+      <div class="chart-wrap tall"><canvas id="chart-final-subs"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- DESIGN NPS TAB -->
+<section class="tab-panel" id="tab-design">
+  <div class="section-head"><span class="num">B</span><h2>Design NPS — Deep Dive</h2><div class="rule"></div></div>
+
+  <div class="note">Note: Design feedback uses a 5-point satisfaction scale (Extremely Satisfied → Extremely Disappointed), not a 0–10 NPS scale. The score below is computed as <strong>(Extremely Satisfied + Satisfied) − (Disappointed + Extremely Disappointed)</strong> as a net satisfaction proxy.</div>
+
+  <div class="kpi-grid">
+    <div class="kpi featured">
+      <div><div class="kpi-label">Net Satisfaction</div><div class="kpi-value" id="d-net">—</div></div>
+      <div class="kpi-sub">selected window</div>
+    </div>
+    <div class="kpi">
+      <div><div class="kpi-label">Ext. Satisfied</div><div class="kpi-value" id="d-es">—</div></div>
+      <div class="kpi-sub" id="d-es-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div><div class="kpi-label">Satisfied</div><div class="kpi-value" id="d-s">—</div></div>
+      <div class="kpi-sub" id="d-s-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div><div class="kpi-label">Disappointed</div><div class="kpi-value" id="d-d">—</div></div>
+      <div class="kpi-sub" id="d-d-sub">—</div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Design Satisfaction by Month</h3>
+      <div class="chart-sub">net satisfaction line</div>
+      <div class="chart-wrap tall"><canvas id="chart-design-trend"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Design Sub-Attributes</h3>
+      <div class="chart-sub">average satisfaction</div>
+      <div class="chart-wrap tall"><canvas id="chart-design-subs"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<!-- FORTNIGHT TAB -->
+<section class="tab-panel" id="tab-fortnight">
+  <div class="section-head"><span class="num">04</span><h2>Fortnight Review</h2><div class="rule"></div><span class="hint">1st & 16th cycles</span></div>
+
+  <div class="fn-grid">
+    <div class="fn-cell">
+      <div class="fn-period" id="fn-curr-period">Current Fortnight</div>
+      <div class="fn-label">in flight</div>
+      <div class="fn-metrics" id="fn-curr"></div>
+    </div>
+    <div class="fn-cell">
+      <div class="fn-period" id="fn-prev-period">Previous Fortnight</div>
+      <div class="fn-label">just closed</div>
+      <div class="fn-metrics" id="fn-prev"></div>
+    </div>
+    <div class="fn-cell">
+      <div class="fn-period" id="fn-yago-period">Same Fortnight Last Year</div>
+      <div class="fn-label">comparison</div>
+      <div class="fn-metrics" id="fn-yago"></div>
+    </div>
+  </div>
+
+  <div class="section-head"><span class="num">04.1</span><h2>Last 8 Fortnights — Trail</h2><div class="rule"></div></div>
+  <div class="table-card">
+    <div class="table-head"><h3>Fortnightly Tracker</h3><span class="meta">Overall NPS · most recent first</span></div>
+    <table class="data" id="fortnight-table">
+      <thead>
+        <tr>
+          <th>Fortnight</th>
+          <th class="num">Eligible PIDs</th>
+          <th class="num">Surveys Sent</th>
+          <th class="num">Responses</th>
+          <th class="num">Fill Rate</th>
+          <th class="num">NPS</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- PEOPLE TAB -->
+<section class="tab-panel" id="tab-people">
+  <div class="section-head"><span class="num">05</span><h2>People Performance</h2><div class="rule"></div><span class="hint">min 5 responses</span></div>
+
+  <div class="controls" style="margin-top: 0;">
+    <div class="seg" id="people-role-seg">
+      <button class="active" data-role="Designer">Designer</button>
+      <button data-role="Project Manager">Project Manager</button>
+      <button data-role="CRM">CRM</button>
+      <button data-role="Design Manager">Design Manager</button>
+    </div>
+    <div class="seg" id="people-source-seg">
+      <button class="active" data-source="final">Overall NPS</button>
+      <button data-source="design">Design NPS</button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-head"><h3 id="people-title">Designer Leaderboard — Overall NPS</h3><span class="meta">click columns to sort</span></div>
+    <table class="data" id="people-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th class="num">Responses</th>
+          <th class="num">Promoters</th>
+          <th class="num">Detractors</th>
+          <th class="num">Avg Score</th>
+          <th class="num">NPS</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- DETRACTORS TAB -->
+<section class="tab-panel" id="tab-detractors">
+  <div class="section-head"><span class="num">06</span><h2>Detractors &amp; Disappointed</h2><div class="rule"></div><span class="hint">action items</span></div>
+
+  <div class="controls" style="margin-top: 0;">
+    <div class="seg" id="det-source-seg">
+      <button class="active" data-source="final">Overall NPS (0–6)</button>
+      <button data-source="design">Design NPS (Disappointed)</button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-head"><h3 id="det-title">Overall NPS — Detractors</h3><span class="meta" id="det-count">—</span></div>
+    <div class="detractor-list" id="detractor-list"></div>
+  </div>
+</section>
+
+<!-- CORRELATION TAB -->
+<section class="tab-panel" id="tab-correlation">
+  <div class="section-head"><span class="num">07</span><h2>Project Value × NPS</h2><div class="rule"></div><span class="hint">do bigger projects score higher?</span></div>
+
+  <div class="chart-card">
+    <h3>Score vs Project Value</h3>
+    <div class="chart-sub">each dot = one customer · overall NPS</div>
+    <div class="scatter-wrap"><canvas id="chart-scatter"></canvas></div>
+  </div>
+
+  <div class="charts-row" style="margin-top: 24px;">
+    <div class="chart-card">
+      <h3>NPS by Project Value Tier</h3>
+      <div class="chart-sub">grouped buckets</div>
+      <div class="chart-wrap"><canvas id="chart-tier-nps"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Response Volume by Tier</h3>
+      <div class="chart-sub">where the projects sit</div>
+      <div class="chart-wrap"><canvas id="chart-tier-vol"></canvas></div>
+    </div>
+  </div>
+</section>
+
+<script>
+/* =====================================================
+   CONFIG — point these at your GitHub raw CSV URLs
+   ===================================================== */
+const CONFIG = {
+  // Update these to your GitHub raw CSV URLs when you push the files.
+  // Example: https://raw.githubusercontent.com/sunilbonito/nps-dashboard/main/data/final_nps.csv
+  FINAL_CSV_URL: './data/final_nps.csv',
+  DESIGN_CSV_URL: './data/design_nps.csv',
+  // Fallback to local files if hosted URLs fail (useful while testing)
+  // No fallback needed if files sit beside index.html
+};
+
+/* =====================================================
+   STATE
+   ===================================================== */
+const STATE = {
+  finalRows: [],
+  designRows: [],
+  windowMonths: 12,
+  branchFilter: 'all',
+  peopleRole: 'Designer',
+  peopleSource: 'final',
+  detSource: 'final',
+  charts: {},
+};
+
+/* =====================================================
+   UTILITIES
+   ===================================================== */
+const fmt = {
+  num: (n) => n == null || isNaN(n) ? '—' : Math.round(n).toLocaleString('en-IN'),
+  pct: (n) => n == null || isNaN(n) ? '—' : (n.toFixed(1) + '%'),
+  signed: (n) => n == null || isNaN(n) ? '—' : (n > 0 ? '+' : '') + n.toFixed(1),
+  inr: (n) => n == null || isNaN(n) ? '—' : '₹' + (n >= 10000000 ? (n/10000000).toFixed(1) + ' Cr' : n >= 100000 ? (n/100000).toFixed(1) + ' L' : n.toLocaleString('en-IN')),
+};
+
+function parseDate(s) {
+  if (!s) return null;
+  const t = String(s).trim();
+  if (!t) return null;
+  // Try ISO first
+  const iso = new Date(t);
+  if (!isNaN(iso.getTime()) && iso.getFullYear() > 2000 && iso.getFullYear() < 2100) {
+    return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate());
+  }
+  return null;
+}
+
+function ymKey(d) { return d ? d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') : null; }
+function ymLabel(d) { return d ? d.toLocaleDateString('en-US', {month:'short', year:'2-digit'}) : ''; }
+
+function withinMonths(d, months) {
+  if (!d) return false;
+  if (months === 'all') return true;
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+  return d >= cutoff;
+}
+
+// NPS column header lookups (the headers are long — match by keyword)
+function findCol(row, keywords) {
+  if (!row) return null;
+  for (const k of Object.keys(row)) {
+    const lower = k.toLowerCase();
+    if (keywords.every(kw => lower.includes(kw.toLowerCase()))) return k;
+  }
+  return null;
+}
+
+/* =====================================================
+   DATA LOADING
+   ===================================================== */
+async function loadCSV(url) {
+  return new Promise((resolve, reject) => {
+    Papa.parse(url, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (res) => resolve(res.data),
+      error: (err) => reject(err),
+    });
+  });
+}
+
+async function loadAll() {
+  document.getElementById('loadingPane').style.display = 'block';
+  document.getElementById('dataSource').textContent = 'Loading…';
+
+  try {
+    const [finalData, designData] = await Promise.all([
+      loadCSV(CONFIG.FINAL_CSV_URL),
+      loadCSV(CONFIG.DESIGN_CSV_URL),
+    ]);
+
+    // Process Final NPS
+    const fNpsCol = findCol(finalData[0], ['recommend bonito', 'overall']);
+    STATE.finalRows = finalData.map(r => ({
+      ...r,
+      _feedbackDate: parseDate(r['Feedback Date']),
+      _sentDate: parseDate(r['Feedback Sent Date']),
+      _checklistDate: parseDate(r['Customer Checklist Signed']),
+      _score: r[fNpsCol] !== undefined && r[fNpsCol] !== '' ? Number(r[fNpsCol]) : null,
+      _projectValue: r['Project Value'] !== undefined && r['Project Value'] !== '' ? Number(r['Project Value']) : null,
+      _branch: r['Branch'] || '',
+      _designer: r['Designer'] || '',
+      _pm: r['Project Manager'] || '',
+      _crm: r['CRM'] || '',
+      _dm: r['Design Manager'] || '',
+      _customer: r['Customer'] || '',
+      _pid: r['Project No'] || '',
+      _comment: r['Please provide any suggestions or comments on how we can enhance our services and make your experience superlative.'] || '',
+    })).filter(r => r._pid);
+
+    // Process Design NPS
+    const dNpsCol = findCol(designData[0], ['recommend bonito', 'experience so far']);
+    STATE.designRows = designData.map(r => ({
+      ...r,
+      _feedbackDate: parseDate(r['Feedback Date']),
+      _sentDate: parseDate(r['Survey Sent Date']),
+      _signoffDate: parseDate(r['3D Sign-Off Date']),
+      _rating: r[dNpsCol] ? String(r[dNpsCol]).trim() : '',
+      _projectValue: r['Total Project Value'] !== undefined && r['Total Project Value'] !== '' ? Number(r['Total Project Value']) : null,
+      _branch: r['Branch'] || '',
+      _designer: r['Designer'] || '',
+      _crm: r['CRM'] || '',
+      _dm: r['Design Manager'] || '',
+      _customer: r['Customer'] || '',
+      _pid: r['Project No'] || '',
+      _comment: r['Please provide any suggestions or comments on how we can enhance our services and make your experience superlative.'] || '',
+    })).filter(r => r._pid);
+
+    document.getElementById('finalCount').textContent = '(' + STATE.finalRows.filter(r => r._score != null).length.toLocaleString() + ')';
+    document.getElementById('designCount').textContent = '(' + STATE.designRows.filter(r => r._rating).length.toLocaleString() + ')';
+    document.getElementById('dataSource').textContent = 'Loaded · ' + new Date().toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'});
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+
+    // Build branch filter
+    const branches = [...new Set([...STATE.finalRows.map(r=>r._branch), ...STATE.designRows.map(r=>r._branch)])].filter(b=>b).sort();
+    const sel = document.getElementById('branchFilter');
+    sel.innerHTML = '<option value="all">All Branches</option>' + branches.map(b => `<option value="${b}">${b}</option>`).join('');
+
+    document.getElementById('loadingPane').style.display = 'none';
+    renderAll();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('loadingPane').innerHTML = `
+      <div style="font-family:'Fraunces',serif;font-size:18px;color:var(--detractor);font-style:italic;">Could not load the CSVs.</div>
+      <div style="margin-top:12px;font-size:11px;">Expected at <code>${CONFIG.FINAL_CSV_URL}</code> and <code>${CONFIG.DESIGN_CSV_URL}</code></div>
+      <div style="margin-top:8px;font-size:11px;">${err.message || err}</div>
+    `;
+  }
+}
+
+/* =====================================================
+   FILTERS
+   ===================================================== */
+function getFilteredFinal() {
+  return STATE.finalRows.filter(r => {
+    if (STATE.branchFilter !== 'all' && r._branch !== STATE.branchFilter) return false;
+    if (!withinMonths(r._feedbackDate || r._sentDate, STATE.windowMonths)) return false;
+    return true;
+  });
+}
+function getFilteredDesign() {
+  return STATE.designRows.filter(r => {
+    if (STATE.branchFilter !== 'all' && r._branch !== STATE.branchFilter) return false;
+    if (!withinMonths(r._feedbackDate || r._sentDate, STATE.windowMonths)) return false;
+    return true;
+  });
+}
+
+/* =====================================================
+   NPS CALCULATIONS
+   ===================================================== */
+function computeNPS(rows) {
+  const scored = rows.filter(r => r._score != null && !isNaN(r._score));
+  const prom = scored.filter(r => r._score >= 9).length;
+  const pass = scored.filter(r => r._score >= 7 && r._score <= 8).length;
+  const det = scored.filter(r => r._score <= 6).length;
+  const total = scored.length;
+  return {
+    total, prom, pass, det,
+    nps: total ? ((prom - det) / total * 100) : null,
+    avg: total ? scored.reduce((s,r) => s + r._score, 0) / total : null,
+  };
+}
+
+const DESIGN_RATINGS = ['Extremely Satisfied','Satisfied','Neutral','Disappointed','Extremely Disappointed'];
+const DESIGN_SCORE = {'Extremely Satisfied':2, 'Satisfied':1, 'Neutral':0, 'Disappointed':-1, 'Extremely Disappointed':-2};
+
+function computeDesign(rows) {
+  const rated = rows.filter(r => r._rating && DESIGN_RATINGS.includes(r._rating));
+  const counts = {};
+  DESIGN_RATINGS.forEach(r => counts[r] = 0);
+  rated.forEach(r => counts[r._rating]++);
+  const total = rated.length;
+  const positive = counts['Extremely Satisfied'] + counts['Satisfied'];
+  const negative = counts['Disappointed'] + counts['Extremely Disappointed'];
+  return {
+    total, counts,
+    netSat: total ? ((positive - negative) / total * 100) : null,
+    csat: total ? (positive / total * 100) : null,
+  };
+}
+
+/* =====================================================
+   FORTNIGHT LOGIC
+   ===================================================== */
+function fortnightBounds(refDate) {
+  // Fortnight 1 = day 1-15, Fortnight 2 = day 16-end
+  const y = refDate.getFullYear(), m = refDate.getMonth(), d = refDate.getDate();
+  if (d <= 15) {
+    return { start: new Date(y, m, 1), end: new Date(y, m, 15, 23, 59, 59), label: ymLabel(refDate) + ' · 1st half' };
+  } else {
+    return { start: new Date(y, m, 16), end: new Date(y, m+1, 0, 23, 59, 59), label: ymLabel(refDate) + ' · 2nd half' };
+  }
+}
+function previousFortnight(b) {
+  const dayBefore = new Date(b.start);
+  dayBefore.setDate(dayBefore.getDate() - 1);
+  return fortnightBounds(dayBefore);
+}
+function fortnightStats(rows, bounds, dateKey) {
+  // dateKey can be: 'eligible' (checklist signed / signoff), 'sent', 'responded'
+  let subset;
+  if (dateKey === 'eligible') {
+    subset = rows.filter(r => {
+      const d = r._checklistDate || r._signoffDate;
+      return d && d >= bounds.start && d <= bounds.end;
+    });
+  } else if (dateKey === 'sent') {
+    subset = rows.filter(r => r._sentDate && r._sentDate >= bounds.start && r._sentDate <= bounds.end);
+  } else { // responded
+    subset = rows.filter(r => r._feedbackDate && r._feedbackDate >= bounds.start && r._feedbackDate <= bounds.end);
+  }
+  return subset;
+}
+
+/* =====================================================
+   RENDERING
+   ===================================================== */
+function renderAll() {
+  renderOverviewKPIs();
+  renderTrendCharts();
+  renderBranchTable();
+  renderFinalDetail();
+  renderDesignDetail();
+  renderFortnight();
+  renderPeople();
+  renderDetractors();
+  renderCorrelation();
+}
+
+/* --- Overview KPIs --- */
+function renderOverviewKPIs() {
+  const fAll = getFilteredFinal();
+  const dAll = getFilteredDesign();
+
+  // Current vs previous fortnight using feedback date
+  const now = new Date();
+  const curr = fortnightBounds(now);
+  const prev = previousFortnight(curr);
+
+  const fCurr = fAll.filter(r => r._feedbackDate && r._feedbackDate >= curr.start && r._feedbackDate <= curr.end);
+  const fPrev = fAll.filter(r => r._feedbackDate && r._feedbackDate >= prev.start && r._feedbackDate <= prev.end);
+  const npsC = computeNPS(fCurr).nps;
+  const npsP = computeNPS(fPrev).nps;
+
+  document.getElementById('kpi-nps').innerHTML = (npsC != null ? npsC.toFixed(1) : '—');
+  document.getElementById('kpi-nps-sub').innerHTML = `Current fortnight · ${fCurr.length} responses ${deltaBadge(npsC, npsP)}`;
+
+  const dCurr = dAll.filter(r => r._feedbackDate && r._feedbackDate >= curr.start && r._feedbackDate <= curr.end);
+  const dPrev = dAll.filter(r => r._feedbackDate && r._feedbackDate >= prev.start && r._feedbackDate <= prev.end);
+  const csatC = computeDesign(dCurr).csat;
+  const csatP = computeDesign(dPrev).csat;
+  document.getElementById('kpi-csat').innerHTML = (csatC != null ? csatC.toFixed(1) : '—') + '<span class="unit">%</span>';
+  document.getElementById('kpi-csat-sub').innerHTML = `Current fortnight · ${dCurr.length} responses ${deltaBadge(csatC, csatP)}`;
+
+  // Fill rates (window-based, using sent vs responded)
+  const fSent = fAll.filter(r => r._sentDate).length;
+  const fResp = fAll.filter(r => r._feedbackDate && r._score != null).length;
+  const fFill = fSent ? (fResp/fSent*100) : null;
+  document.getElementById('kpi-fill-final').innerHTML = (fFill != null ? fFill.toFixed(1) : '—') + '<span class="unit">%</span>';
+  document.getElementById('kpi-fill-final-sub').textContent = `${fResp.toLocaleString()} of ${fSent.toLocaleString()} surveys sent`;
+
+  const dSent = dAll.filter(r => r._sentDate || r._feedbackDate).length;
+  const dResp = dAll.filter(r => r._rating).length;
+  const dFill = dSent ? (dResp/dSent*100) : null;
+  document.getElementById('kpi-fill-design').innerHTML = (dFill != null ? dFill.toFixed(1) : '—') + '<span class="unit">%</span>';
+  document.getElementById('kpi-fill-design-sub').textContent = `${dResp.toLocaleString()} of ${dSent.toLocaleString()} eligible`;
+}
+
+function deltaBadge(curr, prev) {
+  if (curr == null || prev == null) return `<span class="delta flat">—</span>`;
+  const d = curr - prev;
+  if (Math.abs(d) < 0.1) return `<span class="delta flat">flat</span>`;
+  return `<span class="delta ${d>0?'up':'down'}">${d>0?'▲':'▼'} ${Math.abs(d).toFixed(1)}</span>`;
+}
+
+/* --- Trend charts --- */
+function renderTrendCharts() {
+  destroyChart('chart-nps-trend');
+  destroyChart('chart-fill-trend');
+  destroyChart('chart-ppd');
+  destroyChart('chart-design-mix');
+
+  const fAll = getFilteredFinal();
+  const dAll = getFilteredDesign();
+
+  // Monthly aggregation
+  const monthsMap = new Map();
+  fAll.forEach(r => {
+    const d = r._feedbackDate || r._sentDate;
+    if (!d) return;
+    const k = ymKey(d);
+    if (!monthsMap.has(k)) monthsMap.set(k, {date: new Date(d.getFullYear(), d.getMonth(), 1), sent: 0, resp: 0, prom: 0, pass: 0, det: 0});
+    const m = monthsMap.get(k);
+    if (r._sentDate) m.sent++;
+    if (r._score != null) {
+      m.resp++;
+      if (r._score >= 9) m.prom++;
+      else if (r._score >= 7) m.pass++;
+      else m.det++;
+    }
+  });
+  const monthsArr = [...monthsMap.entries()].sort((a,b) => a[0].localeCompare(b[0])).map(([k,v]) => ({k, ...v, nps: v.resp ? ((v.prom-v.det)/v.resp*100) : null, fill: v.sent ? (v.resp/v.sent*100) : null}));
+
+  const labels = monthsArr.map(m => ymLabel(m.date));
+
+  // NPS trend
+  STATE.charts['chart-nps-trend'] = new Chart(document.getElementById('chart-nps-trend'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'NPS',
+        data: monthsArr.map(m => m.nps),
+        borderColor: '#c2410c',
+        backgroundColor: 'rgba(194,65,12,0.08)',
+        borderWidth: 2,
+        tension: 0.35,
+        pointRadius: 4,
+        pointBackgroundColor: '#c2410c',
+        pointBorderColor: '#f4ede0',
+        pointBorderWidth: 2,
+        fill: true,
+      }]
+    },
+    options: chartBase({legend: false, y: {beginAtZero: false}})
+  });
+
+  // Fill rate
+  STATE.charts['chart-fill-trend'] = new Chart(document.getElementById('chart-fill-trend'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Fill Rate %',
+        data: monthsArr.map(m => m.fill),
+        backgroundColor: '#1e3a2f',
+        borderRadius: 0,
+      }]
+    },
+    options: chartBase({legend: false, y: {beginAtZero: true, max: 100, suggestedMax: 100}})
+  });
+
+  // Stacked PPD
+  STATE.charts['chart-ppd'] = new Chart(document.getElementById('chart-ppd'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {label: 'Promoters', data: monthsArr.map(m=>m.prom), backgroundColor: '#2d5d3a', stack: 'a'},
+        {label: 'Passives', data: monthsArr.map(m=>m.pass), backgroundColor: '#b8860b', stack: 'a'},
+        {label: 'Detractors', data: monthsArr.map(m=>m.det), backgroundColor: '#a8341c', stack: 'a'},
+      ]
+    },
+    options: chartBase({legend: true, stacked: true})
+  });
+
+  // Design mix donut
+  const dMix = computeDesign(dAll);
+  STATE.charts['chart-design-mix'] = new Chart(document.getElementById('chart-design-mix'), {
+    type: 'doughnut',
+    data: {
+      labels: DESIGN_RATINGS,
+      datasets: [{
+        data: DESIGN_RATINGS.map(r => dMix.counts[r] || 0),
+        backgroundColor: ['#2d5d3a', '#5a8a6a', '#b8860b', '#c8612c', '#a8341c'],
+        borderColor: '#f4ede0',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {position: 'right', labels: {font: {family:'JetBrains Mono', size: 10}, boxWidth: 10, color:'#0f0e0c'}},
+        tooltip: {bodyFont:{family:'JetBrains Mono'}, titleFont:{family:'Fraunces'}}
+      },
+      cutout: '60%',
+    }
+  });
+}
+
+function chartBase({legend=false, stacked=false, y={}}) {
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: legend ? {position:'bottom', labels:{font:{family:'JetBrains Mono', size: 10}, boxWidth: 12, color:'#0f0e0c'}} : {display: false},
+      tooltip: {bodyFont:{family:'JetBrains Mono'}, titleFont:{family:'Fraunces'}}
+    },
+    scales: {
+      x: {stacked, grid: {display: false}, ticks: {font:{family:'JetBrains Mono', size:10}, color:'#6b6356'}},
+      y: {stacked, beginAtZero: false, grid: {color: 'rgba(15,14,12,0.06)'}, ticks: {font:{family:'JetBrains Mono', size:10}, color:'#6b6356'}, ...y}
+    }
+  };
+}
+
+function destroyChart(id) {
+  if (STATE.charts[id]) { STATE.charts[id].destroy(); delete STATE.charts[id]; }
+}
+
+/* --- Branch Table --- */
+function renderBranchTable() {
+  const fAll = getFilteredFinal();
+  const dAll = getFilteredDesign();
+  const branches = [...new Set(fAll.map(r=>r._branch))].filter(b=>b);
+
+  const rows = branches.map(b => {
+    const sub = fAll.filter(r => r._branch === b);
+    const nps = computeNPS(sub);
+    const sent = sub.filter(r => r._sentDate).length;
+    const fill = sent ? (nps.total / sent * 100) : null;
+    return {branch: b, ...nps, fill};
+  }).sort((a,b) => (b.nps ?? -200) - (a.nps ?? -200));
+
+  const tbody = document.querySelector('#branch-table tbody');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="8" class="empty">No data for current filters.</td></tr>'; return; }
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="name">${r.branch}</td>
+      <td class="num">${fmt.num(r.total)}</td>
+      <td class="num"><span class="badge badge-promoter">${r.prom}</span></td>
+      <td class="num"><span class="badge badge-passive">${r.pass}</span></td>
+      <td class="num"><span class="badge badge-detractor">${r.det}</span></td>
+      <td class="num"><strong>${r.nps != null ? r.nps.toFixed(1) : '—'}</strong></td>
+      <td class="num">${r.avg != null ? r.avg.toFixed(2) : '—'}</td>
+      <td class="num">
+        <div class="bar-cell" style="justify-content: flex-end;">
+          <div class="bar-track"><div class="bar-fill ${r.fill > 50 ? 'good' : r.fill > 25 ? 'warn' : 'bad'}" style="width:${Math.min(r.fill||0,100)}%"></div></div>
+          ${fmt.pct(r.fill)}
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+/* --- Final NPS Detail --- */
+function renderFinalDetail() {
+  destroyChart('chart-final-hist');
+  destroyChart('chart-final-subs');
+  const fAll = getFilteredFinal();
+  const nps = computeNPS(fAll);
+
+  document.getElementById('f-nps').textContent = nps.nps != null ? nps.nps.toFixed(1) : '—';
+  document.getElementById('f-prom').textContent = fmt.num(nps.prom);
+  document.getElementById('f-prom-sub').textContent = nps.total ? fmt.pct(nps.prom/nps.total*100) + ' of responses' : '—';
+  document.getElementById('f-pass').textContent = fmt.num(nps.pass);
+  document.getElementById('f-pass-sub').textContent = nps.total ? fmt.pct(nps.pass/nps.total*100) + ' of responses' : '—';
+  document.getElementById('f-det').textContent = fmt.num(nps.det);
+  document.getElementById('f-det-sub').textContent = nps.total ? fmt.pct(nps.det/nps.total*100) + ' of responses' : '—';
+
+  // Histogram 0-10
+  const hist = Array(11).fill(0);
+  fAll.forEach(r => { if (r._score != null && r._score >= 0 && r._score <= 10) hist[r._score]++; });
+  STATE.charts['chart-final-hist'] = new Chart(document.getElementById('chart-final-hist'), {
+    type: 'bar',
+    data: {
+      labels: ['0','1','2','3','4','5','6','7','8','9','10'],
+      datasets: [{
+        data: hist,
+        backgroundColor: hist.map((_,i) => i<=6 ? '#a8341c' : i<=8 ? '#b8860b' : '#2d5d3a'),
+        borderRadius: 0,
+      }]
+    },
+    options: chartBase({legend: false})
+  });
+
+  // Sub-attribute averages
+  const subCols = [
+    {key: 'DESIGN offerings', label: 'Design'},
+    {key: 'PROJECT MANAGEMENT', label: 'Project Mgmt'},
+    {key: 'Execution Service', label: 'Execution'},
+    {key: 'PRODUCT QUALITY', label: 'Product Quality'},
+    {key: 'turn your vision', label: 'Designer Vision'},
+    {key: 'CUSTOMER RELATIONSHIP', label: 'CRM'},
+    {key: 'PROJECT MANAGER/OPERATIONS', label: 'PM/Ops'},
+  ];
+  const sample = fAll.find(r => r);
+  const subAvgs = subCols.map(s => {
+    const col = sample ? Object.keys(sample).find(k => k.includes(s.key)) : null;
+    if (!col) return {label: s.label, avg: null};
+    const vals = fAll.map(r => Number(r[col])).filter(v => !isNaN(v));
+    return {label: s.label, avg: vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null};
+  });
+
+  STATE.charts['chart-final-subs'] = new Chart(document.getElementById('chart-final-subs'), {
+    type: 'bar',
+    data: {
+      labels: subAvgs.map(s => s.label),
+      datasets: [{
+        data: subAvgs.map(s => s.avg),
+        backgroundColor: '#1e3a2f',
+        borderRadius: 0,
+      }]
+    },
+    options: {...chartBase({legend: false, y: {beginAtZero:true, suggestedMax: 5}}), indexAxis: 'y'}
+  });
+}
+
+/* --- Design NPS Detail --- */
+function renderDesignDetail() {
+  destroyChart('chart-design-trend');
+  destroyChart('chart-design-subs');
+  const dAll = getFilteredDesign();
+  const d = computeDesign(dAll);
+
+  document.getElementById('d-net').textContent = d.netSat != null ? d.netSat.toFixed(1) : '—';
+  document.getElementById('d-es').textContent = fmt.num(d.counts['Extremely Satisfied']);
+  document.getElementById('d-es-sub').textContent = d.total ? fmt.pct(d.counts['Extremely Satisfied']/d.total*100) : '—';
+  document.getElementById('d-s').textContent = fmt.num(d.counts['Satisfied']);
+  document.getElementById('d-s-sub').textContent = d.total ? fmt.pct(d.counts['Satisfied']/d.total*100) : '—';
+  document.getElementById('d-d').textContent = fmt.num(d.counts['Disappointed'] + d.counts['Extremely Disappointed']);
+  document.getElementById('d-d-sub').textContent = d.total ? fmt.pct((d.counts['Disappointed']+d.counts['Extremely Disappointed'])/d.total*100) : '—';
+
+  // Monthly net satisfaction
+  const monthsMap = new Map();
+  dAll.forEach(r => {
+    const date = r._feedbackDate;
+    if (!date || !r._rating) return;
+    const k = ymKey(date);
+    if (!monthsMap.has(k)) monthsMap.set(k, {date: new Date(date.getFullYear(), date.getMonth(), 1), total: 0, pos: 0, neg: 0});
+    const m = monthsMap.get(k);
+    m.total++;
+    if (r._rating === 'Extremely Satisfied' || r._rating === 'Satisfied') m.pos++;
+    else if (r._rating === 'Disappointed' || r._rating === 'Extremely Disappointed') m.neg++;
+  });
+  const monthsArr = [...monthsMap.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v]) => ({k, ...v, net: v.total ? ((v.pos-v.neg)/v.total*100) : null}));
+
+  STATE.charts['chart-design-trend'] = new Chart(document.getElementById('chart-design-trend'), {
+    type: 'line',
+    data: {
+      labels: monthsArr.map(m => ymLabel(m.date)),
+      datasets: [{
+        label: 'Net Satisfaction',
+        data: monthsArr.map(m => m.net),
+        borderColor: '#c2410c',
+        backgroundColor: 'rgba(194,65,12,0.1)',
+        borderWidth: 2,
+        tension: 0.35,
+        pointRadius: 4,
+        pointBackgroundColor: '#c2410c',
+        pointBorderColor: '#f4ede0',
+        pointBorderWidth: 2,
+        fill: true,
+      }]
+    },
+    options: chartBase({legend: false})
+  });
+
+  // Sub-attributes
+  const subCols = [
+    {key: 'DESIGNS (Design Theme', label: 'Design Quality'},
+    {key: 'COMMUNICATION', label: 'Communication'},
+    {key: 'design timeline', label: 'Timeline'},
+    {key: 'turn your vision', label: 'Designer Vision'},
+  ];
+  const sample = dAll.find(r => r);
+  const ratingToNum = {'Extremely Satisfied': 5, 'Satisfied': 4, 'Neutral': 3, 'Disappointed': 2, 'Extremely Disappointed': 1};
+  const subAvgs = subCols.map(s => {
+    const col = sample ? Object.keys(sample).find(k => k.includes(s.key)) : null;
+    if (!col) return {label: s.label, avg: null};
+    const vals = dAll.map(r => ratingToNum[String(r[col]).trim()]).filter(v => v != null);
+    return {label: s.label, avg: vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : null};
+  });
+
+  STATE.charts['chart-design-subs'] = new Chart(document.getElementById('chart-design-subs'), {
+    type: 'bar',
+    data: {
+      labels: subAvgs.map(s => s.label),
+      datasets: [{
+        data: subAvgs.map(s => s.avg),
+        backgroundColor: '#c2410c',
+        borderRadius: 0,
+      }]
+    },
+    options: {...chartBase({legend: false, y: {beginAtZero:true, suggestedMax: 5}}), indexAxis: 'y'}
+  });
+}
+
+/* --- Fortnight --- */
+function renderFortnight() {
+  const now = new Date();
+  const curr = fortnightBounds(now);
+  const prev = previousFortnight(curr);
+  const yago = fortnightBounds(new Date(now.getFullYear()-1, now.getMonth(), now.getDate()));
+
+  document.getElementById('fn-curr-period').textContent = curr.label;
+  document.getElementById('fn-prev-period').textContent = prev.label;
+  document.getElementById('fn-yago-period').textContent = yago.label;
+
+  ['curr','prev','yago'].forEach(key => {
+    const b = key==='curr' ? curr : key==='prev' ? prev : yago;
+    const elig = fortnightStats(STATE.finalRows, b, 'eligible').length;
+    const sent = fortnightStats(STATE.finalRows, b, 'sent').length;
+    const resp = fortnightStats(STATE.finalRows, b, 'responded');
+    const respCount = resp.filter(r => r._score != null).length;
+    const fillRate = sent ? (respCount/sent*100) : null;
+    const nps = computeNPS(resp);
+
+    document.getElementById('fn-'+key).innerHTML = `
+      <div class="fn-m"><div class="v">${fmt.num(elig)}</div><div class="l">Eligible (window)</div></div>
+      <div class="fn-m"><div class="v">${fmt.num(sent)}</div><div class="l">Surveys Sent</div></div>
+      <div class="fn-m"><div class="v">${fmt.num(respCount)}</div><div class="l">Responded</div></div>
+      <div class="fn-m"><div class="v">${fmt.pct(fillRate)}</div><div class="l">Fill Rate</div></div>
+      <div class="fn-m"><div class="v">${nps.nps != null ? nps.nps.toFixed(1) : '—'}</div><div class="l">NPS Score</div></div>
+      <div class="fn-m"><div class="v">${nps.avg != null ? nps.avg.toFixed(2) : '—'}</div><div class="l">Avg Score</div></div>
+    `;
+  });
+
+  // Last 8 fortnights table
+  const rows = [];
+  let cursor = curr;
+  for (let i = 0; i < 8; i++) {
+    const sent = fortnightStats(STATE.finalRows, cursor, 'sent').length;
+    const elig = fortnightStats(STATE.finalRows, cursor, 'eligible').length;
+    const resp = fortnightStats(STATE.finalRows, cursor, 'responded');
+    const respCount = resp.filter(r => r._score != null).length;
+    const fillRate = sent ? (respCount/sent*100) : null;
+    const nps = computeNPS(resp);
+    rows.push({label: cursor.label, elig, sent, respCount, fillRate, nps: nps.nps});
+    cursor = previousFortnight(cursor);
+  }
+
+  document.querySelector('#fortnight-table tbody').innerHTML = rows.map(r => `
+    <tr>
+      <td class="name">${r.label}</td>
+      <td class="num">${fmt.num(r.elig)}</td>
+      <td class="num">${fmt.num(r.sent)}</td>
+      <td class="num">${fmt.num(r.respCount)}</td>
+      <td class="num">
+        <div class="bar-cell" style="justify-content: flex-end;">
+          <div class="bar-track"><div class="bar-fill ${r.fillRate > 50 ? 'good' : r.fillRate > 25 ? 'warn' : 'bad'}" style="width:${Math.min(r.fillRate||0,100)}%"></div></div>
+          ${fmt.pct(r.fillRate)}
+        </div>
+      </td>
+      <td class="num"><strong>${r.nps != null ? r.nps.toFixed(1) : '—'}</strong></td>
+    </tr>
+  `).join('');
+}
+
+/* --- People --- */
+function renderPeople() {
+  const role = STATE.peopleRole;
+  const source = STATE.peopleSource;
+  const rows = source === 'final' ? getFilteredFinal() : getFilteredDesign();
+  const roleKey = {Designer:'_designer','Project Manager':'_pm', CRM:'_crm', 'Design Manager':'_dm'}[role];
+
+  document.getElementById('people-title').textContent = `${role} Leaderboard — ${source==='final'?'Overall NPS':'Design NPS'}`;
+
+  const groups = {};
+  rows.forEach(r => {
+    const name = (r[roleKey] || '').trim();
+    if (!name) return;
+    if (!groups[name]) groups[name] = [];
+    groups[name].push(r);
+  });
+
+  let aggregated;
+  if (source === 'final') {
+    aggregated = Object.entries(groups).map(([name, list]) => {
+      const n = computeNPS(list);
+      return {name, total: n.total, prom: n.prom, det: n.det, avg: n.avg, nps: n.nps};
+    });
+  } else {
+    aggregated = Object.entries(groups).map(([name, list]) => {
+      const d = computeDesign(list);
+      return {name, total: d.total, prom: (d.counts['Extremely Satisfied']||0) + (d.counts['Satisfied']||0), det: (d.counts['Disappointed']||0) + (d.counts['Extremely Disappointed']||0), avg: null, nps: d.netSat};
+    });
+  }
+
+  const filtered = aggregated.filter(a => a.total >= 5).sort((a,b) => (b.nps ?? -200) - (a.nps ?? -200));
+
+  const tbody = document.querySelector('#people-table tbody');
+  if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No one meets the 5-response minimum yet.</td></tr>'; return; }
+  tbody.innerHTML = filtered.map((p, i) => `
+    <tr>
+      <td class="name"><span style="font-family:'JetBrains Mono';color:var(--muted);font-size:11px;margin-right:8px;">${String(i+1).padStart(2,'0')}</span>${p.name}</td>
+      <td class="num">${p.total}</td>
+      <td class="num"><span class="badge badge-promoter">${p.prom}</span></td>
+      <td class="num"><span class="badge badge-detractor">${p.det}</span></td>
+      <td class="num">${p.avg != null ? p.avg.toFixed(2) : '—'}</td>
+      <td class="num"><strong>${p.nps != null ? p.nps.toFixed(1) : '—'}</strong></td>
+    </tr>
+  `).join('');
+}
+
+/* --- Detractors --- */
+function renderDetractors() {
+  const source = STATE.detSource;
+  const list = document.getElementById('detractor-list');
+  let detractors;
+  if (source === 'final') {
+    detractors = getFilteredFinal().filter(r => r._score != null && r._score <= 6)
+      .sort((a,b) => (b._feedbackDate || 0) - (a._feedbackDate || 0));
+    document.getElementById('det-title').textContent = 'Overall NPS — Detractors (score 0–6)';
+  } else {
+    detractors = getFilteredDesign().filter(r => r._rating === 'Disappointed' || r._rating === 'Extremely Disappointed')
+      .sort((a,b) => (b._feedbackDate || 0) - (a._feedbackDate || 0));
+    document.getElementById('det-title').textContent = 'Design NPS — Disappointed Customers';
+  }
+  document.getElementById('det-count').textContent = `${detractors.length} flagged · most recent first`;
+
+  if (!detractors.length) {
+    list.innerHTML = '<div class="empty">No detractors in current selection. ✨</div>';
+    return;
+  }
+
+  list.innerHTML = detractors.slice(0, 100).map(r => {
+    const scoreLabel = source === 'final' ? `${r._score}/10` : r._rating;
+    const scoreClass = source === 'final' ? 's-detractor' : 's-disappointed';
+    const dateStr = r._feedbackDate ? r._feedbackDate.toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '—';
+    const owner = source === 'final' ? (r._pm || r._designer || r._crm || '—') : (r._designer || r._crm || '—');
+    return `
+      <div class="detractor-item">
+        <div class="det-top">
+          <div>
+            <div class="det-customer">${r._customer || 'Unnamed'}</div>
+            <div class="det-meta">PID ${r._pid} · ${r._branch || '—'} · ${owner} · ${dateStr}</div>
+          </div>
+          <div class="det-score ${scoreClass}">${scoreLabel}</div>
+        </div>
+        ${r._comment ? `<div class="det-comment">${escapeHtml(r._comment)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]); }
+
+/* --- Correlation --- */
+function renderCorrelation() {
+  destroyChart('chart-scatter');
+  destroyChart('chart-tier-nps');
+  destroyChart('chart-tier-vol');
+
+  const fAll = getFilteredFinal().filter(r => r._score != null && r._projectValue != null && r._projectValue > 0 && r._projectValue < 100000000);
+
+  // Scatter
+  STATE.charts['chart-scatter'] = new Chart(document.getElementById('chart-scatter'), {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Customer',
+        data: fAll.map(r => ({x: r._projectValue/100000, y: r._score})),
+        backgroundColor: fAll.map(r => r._score >= 9 ? 'rgba(45,93,58,0.6)' : r._score >= 7 ? 'rgba(184,134,11,0.6)' : 'rgba(168,52,28,0.6)'),
+        borderColor: fAll.map(r => r._score >= 9 ? '#2d5d3a' : r._score >= 7 ? '#b8860b' : '#a8341c'),
+        borderWidth: 1,
+        pointRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {display: false},
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `Score: ${ctx.parsed.y}/10 · Value: ₹${(ctx.parsed.x).toFixed(1)} L`
+          },
+          bodyFont:{family:'JetBrains Mono'}, titleFont:{family:'Fraunces'}
+        }
+      },
+      scales: {
+        x: {type: 'logarithmic', title: {display: true, text: 'Project Value (₹ Lakhs)', font:{family:'JetBrains Mono', size:11}, color: '#6b6356'}, grid: {color: 'rgba(15,14,12,0.05)'}, ticks: {font:{family:'JetBrains Mono', size:10}, color:'#6b6356'}},
+        y: {min: 0, max: 10, title: {display: true, text: 'NPS Score (0–10)', font:{family:'JetBrains Mono', size:11}, color: '#6b6356'}, grid: {color: 'rgba(15,14,12,0.05)'}, ticks: {stepSize: 1, font:{family:'JetBrains Mono', size:10}, color:'#6b6356'}}
+      }
+    }
+  });
+
+  // Tiers
+  const tiers = [
+    {label: '< ₹5L', test: v => v < 500000},
+    {label: '₹5–10L', test: v => v >= 500000 && v < 1000000},
+    {label: '₹10–20L', test: v => v >= 1000000 && v < 2000000},
+    {label: '₹20–50L', test: v => v >= 2000000 && v < 5000000},
+    {label: '₹50L+', test: v => v >= 5000000},
+  ];
+  const tierStats = tiers.map(t => {
+    const sub = fAll.filter(r => t.test(r._projectValue));
+    return {label: t.label, ...computeNPS(sub)};
+  });
+
+  STATE.charts['chart-tier-nps'] = new Chart(document.getElementById('chart-tier-nps'), {
+    type: 'bar',
+    data: {
+      labels: tierStats.map(t => t.label),
+      datasets: [{
+        data: tierStats.map(t => t.nps),
+        backgroundColor: tierStats.map(t => t.nps != null && t.nps >= 50 ? '#2d5d3a' : t.nps != null && t.nps >= 0 ? '#b8860b' : '#a8341c'),
+        borderRadius: 0,
+      }]
+    },
+    options: chartBase({legend: false})
+  });
+
+  STATE.charts['chart-tier-vol'] = new Chart(document.getElementById('chart-tier-vol'), {
+    type: 'bar',
+    data: {
+      labels: tierStats.map(t => t.label),
+      datasets: [{
+        data: tierStats.map(t => t.total),
+        backgroundColor: '#0f0e0c',
+        borderRadius: 0,
+      }]
+    },
+    options: chartBase({legend: false, y: {beginAtZero: true}})
+  });
+}
+
+/* --- Export Detractors --- */
+function exportDetractors() {
+  const final = getFilteredFinal().filter(r => r._score != null && r._score <= 6);
+  const design = getFilteredDesign().filter(r => r._rating === 'Disappointed' || r._rating === 'Extremely Disappointed');
+
+  const finalSheet = final.map(r => ({
+    'PID': r._pid, 'Customer': r._customer, 'Branch': r._branch,
+    'Designer': r._designer, 'PM': r._pm, 'CRM': r._crm, 'Design Manager': r._dm,
+    'Score': r._score, 'Project Value': r._projectValue,
+    'Feedback Date': r._feedbackDate ? r._feedbackDate.toISOString().slice(0,10) : '',
+    'Comment': r._comment,
+  }));
+  const designSheet = design.map(r => ({
+    'PID': r._pid, 'Customer': r._customer, 'Branch': r._branch,
+    'Designer': r._designer, 'CRM': r._crm, 'Design Manager': r._dm,
+    'Rating': r._rating, 'Project Value': r._projectValue,
+    'Feedback Date': r._feedbackDate ? r._feedbackDate.toISOString().slice(0,10) : '',
+    'Comment': r._comment,
+  }));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(finalSheet), 'Overall NPS Detractors');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(designSheet), 'Design Disappointed');
+  XLSX.writeFile(wb, `bonito_detractors_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+/* =====================================================
+   EVENTS
+   ===================================================== */
+document.querySelectorAll('.tab-bar button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+// Activate overview by default
+document.querySelector('.tab-bar button[data-tab="overview"]').click();
+
+document.querySelectorAll('.seg button[data-window]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.seg button[data-window]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    STATE.windowMonths = btn.dataset.window === 'all' ? 'all' : parseInt(btn.dataset.window);
+    renderAll();
+  });
+});
+
+document.getElementById('branchFilter').addEventListener('change', (e) => {
+  STATE.branchFilter = e.target.value;
+  renderAll();
+});
+
+document.querySelectorAll('#people-role-seg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#people-role-seg button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    STATE.peopleRole = btn.dataset.role;
+    renderPeople();
+  });
+});
+
+document.querySelectorAll('#people-source-seg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#people-source-seg button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    STATE.peopleSource = btn.dataset.source;
+    renderPeople();
+  });
+});
+
+document.querySelectorAll('#det-source-seg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#det-source-seg button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    STATE.detSource = btn.dataset.source;
+    renderDetractors();
+  });
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadAll);
+document.getElementById('exportBtn').addEventListener('click', exportDetractors);
+
+loadAll();
+</script>
+
+</body>
+</html>
