@@ -3,288 +3,330 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Bonito Designs — NPS Dashboard</title>
+<title>Bonito Designs — NPS Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
-    --ink: #1f2937;
-    --muted: #6b7280;
-    --bg: #f9fafb;
-    --card: #ffffff;
-    --border: #e5e7eb;
-    --primary: #1e40af;
-    --good: #16a34a;
-    --warn: #d97706;
-    --bad: #dc2626;
+    --ink: #0f0e0c;
+    --paper: #f4ede0;
+    --paper-2: #ede4d3;
+    --line: #1a1815;
+    --muted: #6b6356;
+    --accent: #c2410c;
+    --good: #2d5d3a;
+    --warn: #b8860b;
+    --bad: #a8341c;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--ink); padding: 24px 20px 60px; -webkit-font-smoothing: antialiased; }
+  html, body { background: var(--paper); color: var(--ink); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  body { min-height: 100vh; padding: 28px 24px 60px; }
 
-  .header { margin-bottom: 24px; }
-  .header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
-  .header .sub { color: var(--muted); font-size: 14px; margin-top: 4px; }
-  .header .updated { float: right; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 16px; margin-bottom: 24px; }
+  .masthead-top { display: flex; justify-content: space-between; align-items: baseline; font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .masthead-top .meta { display: flex; gap: 20px; }
+  .masthead-top .meta span:before { content: '·'; margin-right: 8px; color: var(--accent); }
+  .masthead-top .meta span:first-child:before { content: ''; margin: 0; }
+  h1.title { font-family: 'Fraunces', serif; font-weight: 500; font-size: clamp(36px, 5.5vw, 72px); line-height: 0.95; letter-spacing: -0.03em; font-style: italic; }
+  h1.title em { font-style: normal; font-weight: 300; color: var(--accent); }
+  .tagline { font-family: 'Fraunces', serif; font-style: italic; color: var(--muted); margin-top: 8px; font-size: 15px; }
 
-  .controls { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; margin-bottom: 16px; }
-  .control-group { display: flex; flex-direction: column; gap: 6px; }
-  .control-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--card); }
-  .seg button { font-size: 13px; padding: 7px 14px; background: var(--card); border: none; color: var(--ink); cursor: pointer; border-right: 1px solid var(--border); font-weight: 500; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0 16px; align-items: center; }
+  .seg { display: inline-flex; border: 1px solid var(--ink); background: var(--paper); overflow: hidden; }
+  .seg button { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 13px; background: transparent; border: none; color: var(--ink); cursor: pointer; border-right: 1px solid var(--ink); }
   .seg button:last-child { border-right: none; }
-  .seg button.active { background: var(--primary); color: white; }
-  .seg button:hover:not(.active) { background: #f3f4f6; }
-  select { font-size: 13px; padding: 7px 28px 7px 12px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--ink); cursor: pointer; appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%236b7280' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
-  .btn { font-size: 13px; padding: 7px 14px; background: var(--card); border: 1px solid var(--border); color: var(--ink); cursor: pointer; border-radius: 6px; font-weight: 500; }
-  .btn:hover { background: #f3f4f6; }
-  .btn.primary { background: var(--primary); color: white; border-color: var(--primary); }
-  .btn.primary:hover { background: #1e3a8a; }
+  .seg button.active { background: var(--ink); color: var(--paper); }
+  .seg button:hover:not(.active) { background: rgba(15,14,12,0.06); }
+  select.filter, .ghost { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 8px 13px; background: var(--paper); border: 1px solid var(--ink); color: var(--ink); cursor: pointer; }
+  select.filter { appearance: none; -webkit-appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%230f0e0c' fill='none' stroke-width='1.5'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+  .ghost:hover { background: var(--ink); color: var(--paper); }
+  .ghost.primary { background: var(--ink); color: var(--paper); }
+  .ghost.primary:hover { background: var(--accent); border-color: var(--accent); }
 
-  .tabs { display: flex; gap: 4px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 4px; margin-bottom: 16px; overflow-x: auto; }
-  .tabs button { font-size: 13px; padding: 8px 14px; background: transparent; border: none; cursor: pointer; color: var(--muted); border-radius: 5px; font-weight: 500; white-space: nowrap; }
-  .tabs button.active { background: var(--ink); color: white; }
-  .tabs button:hover:not(.active) { background: #f3f4f6; color: var(--ink); }
+  .tab-bar { display: flex; border-bottom: 2px solid var(--ink); margin-bottom: 20px; flex-wrap: wrap; }
+  .tab-bar button { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; padding: 11px 20px 13px; background: transparent; border: none; cursor: pointer; color: var(--muted); position: relative; letter-spacing: -0.01em; }
+  .tab-bar button.active { color: var(--ink); }
+  .tab-bar button.active:after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: var(--accent); }
+  .tab-bar button:hover { color: var(--ink); }
+  .tab-bar .count { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-left: 5px; font-weight: 400; }
+
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
-  .kpi { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
-  .kpi.primary { background: var(--ink); color: white; border-color: var(--ink); }
-  .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
-  .kpi.primary .kpi-label { color: rgba(255,255,255,0.7); }
-  .kpi-value { font-size: 32px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
-  .kpi-value .unit { font-size: 18px; color: var(--muted); margin-left: 2px; font-weight: 600; }
-  .kpi.primary .kpi-value .unit { color: rgba(255,255,255,0.7); }
-  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
-  .kpi.primary .kpi-sub { color: rgba(255,255,255,0.7); }
-  .gap-bar { height: 4px; background: #f3f4f6; border-radius: 2px; margin-top: 8px; position: relative; overflow: hidden; }
-  .gap-bar-fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2px; transition: width 0.3s; }
-  .gap-bar-fill.good { background: var(--good); }
-  .gap-bar-fill.warn { background: var(--warn); }
-  .gap-bar-fill.bad { background: var(--bad); }
+  .section-head { display: flex; align-items: baseline; gap: 14px; margin: 32px 0 14px; }
+  .section-head .num { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.15em; }
+  .section-head h2 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 24px; letter-spacing: -0.01em; }
+  .section-head .rule { flex: 1; height: 1px; background: var(--ink); opacity: 0.2; }
+  .section-head .hint { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; }
 
-  .alert { background: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-start; font-size: 13px; }
-  .alert.bad { background: #fee2e2; border-color: #fca5a5; }
-  .alert.good { background: #d1fae5; border-color: #86efac; }
-  .alert-icon { font-size: 18px; line-height: 1; }
-  .alert strong { display: block; margin-bottom: 2px; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border-top: 1px solid var(--ink); border-left: 1px solid var(--ink); margin-bottom: 8px; }
+  .kpi { background: var(--paper); padding: 20px 20px 22px; border-right: 1px solid var(--ink); border-bottom: 1px solid var(--ink); min-height: 152px; display: flex; flex-direction: column; justify-content: space-between; }
+  .kpi.featured { background: var(--ink); color: var(--paper); }
+  .kpi.featured .kpi-label, .kpi.featured .kpi-sub { color: var(--paper-2); opacity: 0.75; }
+  .kpi-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+  .kpi-value { font-family: 'Fraunces', serif; font-weight: 400; font-size: 52px; line-height: 1; letter-spacing: -0.025em; margin-top: 12px; }
+  .kpi-value .unit { font-size: 20px; color: var(--muted); margin-left: 3px; font-style: italic; }
+  .kpi.featured .kpi-value .unit { color: var(--paper-2); }
+  .kpi-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 10px; letter-spacing: 0.02em; }
+  .gap-bar { height: 3px; background: rgba(15,14,12,0.08); margin-top: 6px; position: relative; }
+  .kpi.featured .gap-bar { background: rgba(244,237,224,0.18); }
+  .gap-fill { position: absolute; left: 0; top: 0; bottom: 0; }
+  .gap-fill.good { background: var(--good); }
+  .gap-fill.warn { background: var(--warn); }
+  .gap-fill.bad { background: var(--bad); }
 
-  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-bottom: 16px; }
-  .card h3 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-  .card .card-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+  .alert { background: rgba(168,52,28,0.08); border: 1px solid var(--bad); padding: 14px 18px; margin-bottom: 16px; display: flex; gap: 12px; align-items: flex-start; }
+  .alert.good { background: rgba(45,93,58,0.08); border-color: var(--good); }
+  .alert-icon { font-size: 18px; line-height: 1; flex-shrink: 0; margin-top: 2px; }
+  .alert strong { font-family: 'Fraunces', serif; font-size: 15px; display: block; margin-bottom: 3px; }
+  .alert p { font-family: 'Fraunces', serif; font-size: 13px; line-height: 1.5; color: var(--ink); margin: 0; font-style: italic; }
+
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 8px; }
+  .chart-card { background: var(--paper); border: 1px solid var(--ink); padding: 20px; margin-bottom: 16px; }
+  .chart-card h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 17px; margin-bottom: 3px; }
+  .chart-card .chart-sub { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px; }
   .chart-wrap { height: 260px; position: relative; }
+  .chart-wrap.tall { height: 300px; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  table th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); font-weight: 600; padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); }
-  table th.num, table td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  table td { padding: 11px 12px; border-bottom: 1px solid #f3f4f6; }
-  table tr:hover { background: #f9fafb; }
-  table .name { font-weight: 500; }
-  .badge { display: inline-block; padding: 2px 7px; font-size: 11px; border-radius: 3px; font-weight: 500; }
-  .badge.good { background: #d1fae5; color: #065f46; }
-  .badge.warn { background: #fef3c7; color: #92400e; }
-  .badge.bad { background: #fee2e2; color: #991b1b; }
-  .mini-bar { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
-  .mini-bar-track { width: 80px; height: 5px; background: #f3f4f6; border-radius: 3px; overflow: hidden; }
-  .mini-bar-fill { height: 100%; }
-  .mini-bar-fill.good { background: var(--good); }
-  .mini-bar-fill.warn { background: var(--warn); }
-  .mini-bar-fill.bad { background: var(--bad); }
+  .table-card { background: var(--paper); border: 1px solid var(--ink); margin-bottom: 16px; }
+  .table-head { padding: 16px 20px; border-bottom: 1px solid var(--ink); display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 10px; }
+  .table-head h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; }
+  .table-head .meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; }
+  table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+  table.data thead { background: var(--paper-2); }
+  table.data th { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 11px 14px; text-align: left; font-weight: 500; border-bottom: 1px solid var(--ink); }
+  table.data th.num, table.data td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: 'JetBrains Mono', monospace; }
+  table.data td { padding: 12px 14px; border-bottom: 1px solid rgba(15,14,12,0.08); }
+  table.data tr:hover { background: rgba(15,14,12,0.03); }
+  table.data .name { font-weight: 500; }
+  .badge { display: inline-block; padding: 2px 7px; font-family: 'JetBrains Mono', monospace; font-size: 10px; border-radius: 2px; }
+  .badge-good { background: rgba(45,93,58,0.15); color: var(--good); }
+  .badge-warn { background: rgba(184,134,11,0.15); color: var(--warn); }
+  .badge-bad { background: rgba(168,52,28,0.15); color: var(--bad); }
+  .bar-cell { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+  .bar-track { width: 100px; height: 5px; background: var(--paper-2); position: relative; }
+  .bar-fill { position: absolute; top: 0; left: 0; height: 100%; }
+  .bar-fill.good { background: var(--good); }
+  .bar-fill.warn { background: var(--warn); }
+  .bar-fill.bad { background: var(--bad); }
 
-  .det-list { max-height: 600px; overflow-y: auto; margin: 0 -16px -16px; }
-  .det-item { padding: 14px 16px; border-bottom: 1px solid #f3f4f6; }
+  .det-list { max-height: 600px; overflow-y: auto; }
+  .det-item { padding: 16px 20px; border-bottom: 1px solid rgba(15,14,12,0.08); }
   .det-item:last-child { border-bottom: none; }
-  .det-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
-  .det-customer { font-weight: 600; font-size: 14px; }
-  .det-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .det-score { background: var(--bad); color: white; padding: 3px 9px; border-radius: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .det-comment { font-size: 13px; margin-top: 8px; padding: 10px 12px; background: #f9fafb; border-radius: 6px; border-left: 3px solid var(--bad); }
+  .det-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
+  .det-customer { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; }
+  .det-meta { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .det-score { font-family: 'JetBrains Mono', monospace; font-weight: 600; padding: 3px 9px; font-size: 12px; background: var(--bad); color: var(--paper); }
+  .det-comment { font-family: 'Fraunces', serif; font-size: 14px; line-height: 1.55; margin-top: 8px; font-style: italic; opacity: 0.9; padding-left: 14px; border-left: 2px solid var(--accent); }
 
-  .loading { text-align: center; padding: 60px 20px; color: var(--muted); }
-  .empty { padding: 30px; text-align: center; color: var(--muted); font-size: 13px; }
+  .loading { text-align: center; padding: 60px 20px; font-family: 'JetBrains Mono', monospace; color: var(--muted); font-size: 12px; }
+  .empty { padding: 40px; text-align: center; color: var(--muted); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
 
-  .help { display: inline-block; width: 14px; height: 14px; border: 1px solid currentColor; border-radius: 50%; font-size: 9px; text-align: center; line-height: 12px; cursor: help; margin-left: 4px; font-weight: 600; opacity: 0.6; }
-
-  @media (max-width: 900px) {
-    .kpis { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 1024px) {
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
     .charts-row { grid-template-columns: 1fr; }
-    .header .updated { float: none; display: block; margin-top: 8px; }
+    .kpi-value { font-size: 42px; }
   }
-  @media (max-width: 600px) { .kpis { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) {
+    body { padding: 20px 16px 60px; }
+    .kpi-grid { grid-template-columns: 1fr; }
+    h1.title { font-size: 40px; }
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--paper-2); }
+  ::-webkit-scrollbar-thumb { background: var(--ink); }
 </style>
 </head>
 <body>
 
-<header class="header">
-  <div class="updated" id="updated">Loading…</div>
-  <h1>NPS Dashboard</h1>
-  <div class="sub">Bonito Designs · Customer feedback tracker</div>
+<header class="masthead">
+  <div class="masthead-top">
+    <div class="meta">
+      <span>Vol. I</span>
+      <span id="todayDate">—</span>
+      <span>Bonito Designs</span>
+    </div>
+    <div class="meta">
+      <span id="dataSource">Loading…</span>
+    </div>
+  </div>
+  <h1 class="title">NPS <em>Intelligence</em></h1>
+  <p class="tagline">A fortnightly account of how our customers feel — and how often they tell us.</p>
 </header>
 
 <div class="controls">
-  <div class="control-group">
-    <span class="control-label">Time Period</span>
-    <div class="seg" id="windowSeg">
-      <button data-window="fortnight">This Fortnight</button>
-      <button data-window="90">3 Months</button>
-      <button data-window="180">6 Months</button>
-      <button class="active" data-window="365">12 Months</button>
-      <button data-window="all">All Time</button>
-    </div>
+  <div class="seg" id="windowSeg">
+    <button data-window="fortnight">Fortnight</button>
+    <button data-window="90">3 Mo</button>
+    <button data-window="180">6 Mo</button>
+    <button class="active" data-window="365">12 Mo</button>
+    <button data-window="all">All Time</button>
   </div>
-  <div class="control-group">
-    <span class="control-label">Branch</span>
-    <select id="branchFilter"><option value="all">All Branches</option></select>
-  </div>
-  <div style="margin-left: auto; display: flex; gap: 8px; align-items: flex-end;">
-    <button class="btn" id="refreshBtn">↻ Refresh</button>
-    <button class="btn primary" id="exportBtn">↓ Export Detractors</button>
-  </div>
+  <select class="filter" id="branchFilter">
+    <option value="all">All Branches</option>
+  </select>
+  <button class="ghost" id="refreshBtn">↻ Refresh Data</button>
+  <button class="ghost primary" id="exportBtn">↓ Export Detractors</button>
 </div>
 
 <div id="alertSlot"></div>
 
-<div class="tabs">
-  <button class="active" data-tab="overview">📊 Overview</button>
-  <button data-tab="overall">⭐ Overall NPS</button>
-  <button data-tab="design">🎨 Design NPS</button>
-  <button data-tab="branches">🏢 Branches</button>
-  <button data-tab="people">👥 People</button>
-  <button data-tab="detractors">⚠️ Detractors</button>
+<div class="tab-bar">
+  <button class="active" data-tab="overview">Overview</button>
+  <button data-tab="overall">Overall NPS <span class="count" id="overallCount"></span></button>
+  <button data-tab="design">Design NPS <span class="count" id="designCount"></span></button>
+  <button data-tab="branches">Branches</button>
+  <button data-tab="people">People</button>
+  <button data-tab="detractors">Detractors</button>
 </div>
 
-<div id="loadingPane" class="loading">Loading data…</div>
+<div id="loadingPane" class="loading">Loading NPS data…</div>
 
+<!-- OVERVIEW -->
 <section class="tab-panel" id="tab-overview">
-  <div class="kpis">
-    <div class="kpi primary">
-      <div class="kpi-label">Overall NPS Score <span class="help" title="Promoters (9-10) minus Detractors (0-6) as a percentage. Higher is better. Above 50 = excellent.">?</span></div>
-      <div class="kpi-value" id="kpi-nps">—</div>
-      <div class="kpi-sub" id="kpi-nps-sub">—</div>
+  <div class="section-head">
+    <span class="num">01</span>
+    <h2>Headline KPIs</h2>
+    <div class="rule"></div>
+    <span class="hint" id="periodHint">last 12 months</span>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi featured">
+      <div>
+        <div class="kpi-label">Overall NPS Score</div>
+        <div class="kpi-value" id="kpi-overall-nps">—</div>
+      </div>
+      <div class="kpi-sub" id="kpi-overall-nps-sub">—</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Overall — Fill Rate <span class="help" title="% of completed projects whose customers actually responded.">?</span></div>
-      <div class="kpi-value" id="kpi-fill-final">—<span class="unit">%</span></div>
-      <div class="kpi-sub" id="kpi-fill-final-sub">—</div>
-      <div class="gap-bar"><div class="gap-bar-fill" id="kpi-fill-final-bar"></div></div>
+      <div>
+        <div class="kpi-label">Overall NPS — Fill Rate</div>
+        <div class="kpi-value" id="kpi-overall-fill">—<span class="unit">%</span></div>
+      </div>
+      <div>
+        <div class="kpi-sub" id="kpi-overall-fill-sub">—</div>
+        <div class="gap-bar"><div class="gap-fill" id="kpi-overall-fill-bar"></div></div>
+      </div>
     </div>
-    <div class="kpi primary">
-      <div class="kpi-label">Design — % Satisfied <span class="help" title="% of design feedback responses marked Satisfied or Extremely Satisfied.">?</span></div>
-      <div class="kpi-value" id="kpi-design-sat">—<span class="unit">%</span></div>
-      <div class="kpi-sub" id="kpi-design-sat-sub">—</div>
+    <div class="kpi featured">
+      <div>
+        <div class="kpi-label">Design NPS Score</div>
+        <div class="kpi-value" id="kpi-design-nps">—</div>
+      </div>
+      <div class="kpi-sub" id="kpi-design-nps-sub">—</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Design — Fill Rate <span class="help" title="% of projects with 3D Sign-Off whose customers responded to the design survey.">?</span></div>
-      <div class="kpi-value" id="kpi-fill-design">—<span class="unit">%</span></div>
-      <div class="kpi-sub" id="kpi-fill-design-sub">—</div>
-      <div class="gap-bar"><div class="gap-bar-fill" id="kpi-fill-design-bar"></div></div>
+      <div>
+        <div class="kpi-label">Design NPS — Fill Rate</div>
+        <div class="kpi-value" id="kpi-design-fill">—<span class="unit">%</span></div>
+      </div>
+      <div>
+        <div class="kpi-sub" id="kpi-design-fill-sub">—</div>
+        <div class="gap-bar"><div class="gap-fill" id="kpi-design-fill-bar"></div></div>
+      </div>
     </div>
+  </div>
+
+  <div class="section-head">
+    <span class="num">02</span>
+    <h2>The Story Month-on-Month</h2>
+    <div class="rule"></div>
+    <span class="hint">trend × volume</span>
   </div>
 
   <div class="charts-row">
-    <div class="card">
-      <h3>NPS Score — Monthly Trend</h3>
-      <div class="card-sub">Overall NPS, month-on-month</div>
-      <div class="chart-wrap"><canvas id="chart-nps-trend"></canvas></div>
+    <div class="chart-card">
+      <h3>NPS Score — Monthly</h3>
+      <div class="chart-sub">Overall vs Design · month-on-month</div>
+      <div class="chart-wrap tall"><canvas id="chart-nps-trend"></canvas></div>
     </div>
-    <div class="card">
-      <h3>Fill Rate — Monthly Trend</h3>
-      <div class="card-sub">% of eligible projects that responded</div>
-      <div class="chart-wrap"><canvas id="chart-fill-trend"></canvas></div>
+    <div class="chart-card">
+      <h3>Fill Rate — Monthly</h3>
+      <div class="chart-sub">% of eligible projects that responded</div>
+      <div class="chart-wrap tall"><canvas id="chart-fill-trend"></canvas></div>
     </div>
   </div>
 
-  <div class="card">
-    <h3>Monthly Volume — Eligible vs Responded</h3>
-    <div class="card-sub">Light blue = eligible projects · Red = projects that responded · The gap between them is your opportunity</div>
-    <div class="chart-wrap" style="height: 280px;"><canvas id="chart-volume"></canvas></div>
+  <div class="chart-card">
+    <h3>Eligible vs Responded — Monthly Volume</h3>
+    <div class="chart-sub">Overall NPS · gap between bars = the opportunity</div>
+    <div class="chart-wrap tall"><canvas id="chart-volume"></canvas></div>
   </div>
 </section>
 
+<!-- OVERALL NPS -->
 <section class="tab-panel" id="tab-overall">
-  <div class="kpis">
-    <div class="kpi primary">
-      <div class="kpi-label">NPS Score</div>
-      <div class="kpi-value" id="o-nps">—</div>
+  <div class="section-head"><span class="num">A</span><h2>Overall NPS — Deep Dive</h2><div class="rule"></div></div>
+
+  <div class="kpi-grid">
+    <div class="kpi featured">
+      <div><div class="kpi-label">NPS Score</div><div class="kpi-value" id="o-nps">—</div></div>
       <div class="kpi-sub" id="o-nps-sub">—</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Promoters (9-10)</div>
-      <div class="kpi-value" id="o-prom">—</div>
+      <div><div class="kpi-label">Promoters (9-10)</div><div class="kpi-value" id="o-prom">—</div></div>
       <div class="kpi-sub" id="o-prom-sub">—</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Passives (7-8)</div>
-      <div class="kpi-value" id="o-pass">—</div>
+      <div><div class="kpi-label">Passives (7-8)</div><div class="kpi-value" id="o-pass">—</div></div>
       <div class="kpi-sub" id="o-pass-sub">—</div>
     </div>
     <div class="kpi">
-      <div class="kpi-label">Detractors (0-6)</div>
-      <div class="kpi-value" id="o-det">—</div>
+      <div><div class="kpi-label">Detractors (0-6)</div><div class="kpi-value" id="o-det">—</div></div>
       <div class="kpi-sub" id="o-det-sub">—</div>
     </div>
   </div>
-  <div class="card">
+
+  <div class="chart-card">
     <h3>Score Distribution</h3>
-    <div class="card-sub">How many customers gave each score from 0 to 10</div>
-    <div class="chart-wrap" style="height: 280px;"><canvas id="chart-hist"></canvas></div>
+    <div class="chart-sub">0–10 scale · how many customers gave each score</div>
+    <div class="chart-wrap tall"><canvas id="chart-overall-hist"></canvas></div>
   </div>
 </section>
 
+<!-- DESIGN NPS -->
 <section class="tab-panel" id="tab-design">
-  <div class="alert">
-    <span class="alert-icon">ℹ️</span>
-    <div>
-      <strong>Note: Design feedback uses a different scale.</strong>
-      Customers pick Extremely Satisfied / Satisfied / Neutral / Disappointed / Extremely Disappointed (not 0-10). We show "% Satisfied" — the sum of the top two ratings.
+  <div class="section-head"><span class="num">B</span><h2>Design NPS — Deep Dive</h2><div class="rule"></div></div>
+
+  <div class="kpi-grid">
+    <div class="kpi featured">
+      <div><div class="kpi-label">NPS Score</div><div class="kpi-value" id="d-nps">—</div></div>
+      <div class="kpi-sub" id="d-nps-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div><div class="kpi-label">Promoters (9-10)</div><div class="kpi-value" id="d-prom">—</div></div>
+      <div class="kpi-sub" id="d-prom-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div><div class="kpi-label">Passives (7-8)</div><div class="kpi-value" id="d-pass">—</div></div>
+      <div class="kpi-sub" id="d-pass-sub">—</div>
+    </div>
+    <div class="kpi">
+      <div><div class="kpi-label">Detractors (0-6)</div><div class="kpi-value" id="d-det">—</div></div>
+      <div class="kpi-sub" id="d-det-sub">—</div>
     </div>
   </div>
-  <div class="kpis">
-    <div class="kpi primary">
-      <div class="kpi-label">% Satisfied</div>
-      <div class="kpi-value" id="d-sat">—<span class="unit">%</span></div>
-      <div class="kpi-sub" id="d-sat-sub">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Extremely Satisfied</div>
-      <div class="kpi-value" id="d-es">—</div>
-      <div class="kpi-sub" id="d-es-sub">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Satisfied</div>
-      <div class="kpi-value" id="d-s">—</div>
-      <div class="kpi-sub" id="d-s-sub">—</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-label">Disappointed (any level)</div>
-      <div class="kpi-value" id="d-d">—</div>
-      <div class="kpi-sub" id="d-d-sub">—</div>
-    </div>
-  </div>
-  <div class="charts-row">
-    <div class="card">
-      <h3>Response Distribution</h3>
-      <div class="card-sub">How customers rated their design experience</div>
-      <div class="chart-wrap"><canvas id="chart-design-bars"></canvas></div>
-    </div>
-    <div class="card">
-      <h3>% Satisfied — Monthly Trend</h3>
-      <div class="card-sub">Movement over time</div>
-      <div class="chart-wrap"><canvas id="chart-design-trend"></canvas></div>
-    </div>
+
+  <div class="chart-card">
+    <h3>Score Distribution</h3>
+    <div class="chart-sub">0–10 scale · design feedback</div>
+    <div class="chart-wrap tall"><canvas id="chart-design-hist"></canvas></div>
   </div>
 </section>
 
+<!-- BRANCHES -->
 <section class="tab-panel" id="tab-branches">
-  <div class="card">
-    <h3>Branch Performance</h3>
-    <div class="card-sub">All branches ranked by NPS Score</div>
-    <table id="branch-table">
+  <div class="section-head"><span class="num">03</span><h2>Branches, Ranked</h2><div class="rule"></div><span class="hint">Overall NPS</span></div>
+
+  <div class="table-card">
+    <div class="table-head"><h3>Experience Centre Performance</h3><span class="meta">sorted by NPS score</span></div>
+    <table class="data" id="branch-table">
       <thead>
         <tr>
           <th>Branch</th>
@@ -300,29 +342,26 @@
   </div>
 </section>
 
+<!-- PEOPLE -->
 <section class="tab-panel" id="tab-people">
+  <div class="section-head"><span class="num">04</span><h2>People Performance</h2><div class="rule"></div><span class="hint">min 5 responses</span></div>
+
   <div class="controls">
-    <div class="control-group">
-      <span class="control-label">Role</span>
-      <div class="seg" id="people-role-seg">
-        <button class="active" data-role="Designer">Designer</button>
-        <button data-role="Project Manager">PM</button>
-        <button data-role="CRM">CRM</button>
-        <button data-role="Design Manager">Design Manager</button>
-      </div>
+    <div class="seg" id="people-role-seg">
+      <button class="active" data-role="Designer">Designer</button>
+      <button data-role="Project Manager">Project Manager</button>
+      <button data-role="CRM">CRM</button>
+      <button data-role="Design Manager">Design Manager</button>
     </div>
-    <div class="control-group">
-      <span class="control-label">Source</span>
-      <div class="seg" id="people-source-seg">
-        <button class="active" data-source="final">Overall NPS</button>
-        <button data-source="design">Design NPS</button>
-      </div>
+    <div class="seg" id="people-source-seg">
+      <button class="active" data-source="final">Overall NPS</button>
+      <button data-source="design">Design NPS</button>
     </div>
   </div>
-  <div class="card">
-    <h3 id="people-title">Designer Leaderboard — Overall NPS</h3>
-    <div class="card-sub">Minimum 5 responses required to appear</div>
-    <table id="people-table">
+
+  <div class="table-card">
+    <div class="table-head"><h3 id="people-title">Designer Leaderboard — Overall NPS</h3><span class="meta">min 5 responses</span></div>
+    <table class="data" id="people-table">
       <thead>
         <tr>
           <th>Rank</th>
@@ -330,7 +369,7 @@
           <th class="num">Responses</th>
           <th class="num">Promoters</th>
           <th class="num">Detractors</th>
-          <th class="num">Score</th>
+          <th class="num">NPS Score</th>
         </tr>
       </thead>
       <tbody></tbody>
@@ -338,19 +377,19 @@
   </div>
 </section>
 
+<!-- DETRACTORS -->
 <section class="tab-panel" id="tab-detractors">
+  <div class="section-head"><span class="num">05</span><h2>Detractors</h2><div class="rule"></div><span class="hint">scored 0–6</span></div>
+
   <div class="controls">
-    <div class="control-group">
-      <span class="control-label">Source</span>
-      <div class="seg" id="det-source-seg">
-        <button class="active" data-source="final">Overall NPS (0-6)</button>
-        <button data-source="design">Design (Disappointed)</button>
-      </div>
+    <div class="seg" id="det-source-seg">
+      <button class="active" data-source="final">Overall NPS</button>
+      <button data-source="design">Design NPS</button>
     </div>
   </div>
-  <div class="card">
-    <h3 id="det-title">Detractor List</h3>
-    <div class="card-sub" id="det-count">—</div>
+
+  <div class="table-card">
+    <div class="table-head"><h3 id="det-title">Overall NPS — Detractors</h3><span class="meta" id="det-count">—</span></div>
     <div class="det-list" id="det-list"></div>
   </div>
 </section>
@@ -369,8 +408,6 @@ const STATE = {
   detSource: 'final',
   charts: {},
 };
-
-const RATINGS = ['Extremely Satisfied','Satisfied','Neutral','Disappointed','Extremely Disappointed'];
 
 function fmtNum(n) { return n == null || isNaN(n) ? '—' : Math.round(n).toLocaleString('en-IN'); }
 function fmtPct(n) { return n == null || isNaN(n) ? '—' : n.toFixed(1) + '%'; }
@@ -412,42 +449,49 @@ async function loadCSV(url) {
 
 async function loadAll() {
   document.getElementById('loadingPane').style.display = 'block';
-  document.getElementById('updated').textContent = 'Loading…';
+  document.getElementById('dataSource').textContent = 'Loading…';
   try {
     const [final, design] = await Promise.all([loadCSV(CONFIG.FINAL_CSV_URL), loadCSV(CONFIG.DESIGN_CSV_URL)]);
+
+    // Overall NPS file
     const fNpsCol = findCol(final[0], ['recommend bonito']);
     STATE.finalRows = final.map(r => ({
       _pid: r['Project No']||'', _customer: r['Customer']||'', _branch: r['Branch']||'',
       _designer: r['Designer']||'', _pm: r['Project Manager']||'', _crm: r['CRM']||'', _dm: r['Design Manager']||'',
       _feedbackDate: parseDate(r['Feedback Date']),
       _checklistDate: parseDate(r['Customer Checklist Signed']),
-      _score: r[fNpsCol] !== undefined && r[fNpsCol] !== '' ? Number(r[fNpsCol]) : null,
+      _score: r[fNpsCol] !== undefined && r[fNpsCol] !== '' && !isNaN(Number(r[fNpsCol])) ? Number(r[fNpsCol]) : null,
       _comment: r['Please provide any suggestions or comments on how we can enhance our services and make your experience superlative.']||'',
     })).filter(r => r._pid);
 
+    // Design NPS file — ALSO 0-10 scale (this was the bug!)
     const dNpsCol = findCol(design[0], ['recommend bonito']);
     STATE.designRows = design.map(r => ({
       _pid: r['Project No']||'', _customer: r['Customer']||'', _branch: r['Branch']||'',
       _designer: r['Designer']||'', _crm: r['CRM']||'', _dm: r['Design Manager']||'',
       _feedbackDate: parseDate(r['Feedback Date']),
       _signoffDate: parseDate(r['3D Sign-Off Date']),
-      _rating: r[dNpsCol] ? String(r[dNpsCol]).trim() : '',
+      _score: r[dNpsCol] !== undefined && r[dNpsCol] !== '' && !isNaN(Number(r[dNpsCol])) ? Number(r[dNpsCol]) : null,
       _comment: r['Please provide any suggestions or comments on how we can enhance our services and make your experience superlative.']||'',
     })).filter(r => r._pid);
 
     const branches = [...new Set([...STATE.finalRows.map(r=>r._branch), ...STATE.designRows.map(r=>r._branch)])].filter(b=>b).sort();
     document.getElementById('branchFilter').innerHTML = '<option value="all">All Branches</option>' + branches.map(b=>`<option value="${b}">${b}</option>`).join('');
 
-    document.getElementById('updated').textContent = 'Updated ' + new Date().toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'});
+    document.getElementById('overallCount').textContent = '(' + STATE.finalRows.filter(r=>r._score!=null).length.toLocaleString() + ')';
+    document.getElementById('designCount').textContent = '(' + STATE.designRows.filter(r=>r._score!=null).length.toLocaleString() + ')';
+    document.getElementById('dataSource').textContent = 'Updated ' + new Date().toLocaleString('en-IN', {dateStyle:'medium', timeStyle:'short'});
+    document.getElementById('todayDate').textContent = new Date().toLocaleDateString('en-US', {weekday:'long', day:'numeric', month:'long', year:'numeric'}).toUpperCase();
+
     document.getElementById('loadingPane').style.display = 'none';
     renderAll();
   } catch (err) {
     console.error(err);
-    document.getElementById('loadingPane').innerHTML = `<div style="color:var(--bad);">Could not load data. Check that <code>data/final_nps.csv</code> and <code>data/design_nps.csv</code> exist in your repo.<br>${err.message||err}</div>`;
+    document.getElementById('loadingPane').innerHTML = `<div style="color:var(--bad);">Could not load data.<br>Check that <code>data/final_nps.csv</code> and <code>data/design_nps.csv</code> exist.<br>${err.message||err}</div>`;
   }
 }
 
-function inWindow(date, win) { return date && date >= win.start && date <= win.end; }
+function inWindow(d, win) { return d && d >= win.start && d <= win.end; }
 
 function filteredFinal() {
   const win = getWindow();
@@ -471,21 +515,15 @@ function computeNPS(rows) {
   const det = scored.filter(r => r._score <= 6).length;
   return { total: scored.length, prom, pass, det, nps: scored.length ? ((prom-det)/scored.length*100) : null };
 }
-function computeDesignSat(rows) {
-  const rated = rows.filter(r => r._rating && RATINGS.includes(r._rating));
-  const counts = {}; RATINGS.forEach(k => counts[k] = 0);
-  rated.forEach(r => counts[r._rating]++);
-  const positive = counts['Extremely Satisfied'] + counts['Satisfied'];
-  return { total: rated.length, counts, satisfied: rated.length ? (positive/rated.length*100) : null };
-}
+
 function fillRateFinal(rows) {
   const eligible = rows.filter(r => r._checklistDate || r._score != null).length;
   const responded = rows.filter(r => r._score != null).length;
   return { eligible, responded, rate: eligible ? (responded/eligible*100) : null };
 }
 function fillRateDesign(rows) {
-  const eligible = rows.filter(r => r._signoffDate || (r._rating && RATINGS.includes(r._rating))).length;
-  const responded = rows.filter(r => r._rating && RATINGS.includes(r._rating)).length;
+  const eligible = rows.filter(r => r._signoffDate || r._score != null).length;
+  const responded = rows.filter(r => r._score != null).length;
   return { eligible, responded, rate: eligible ? (responded/eligible*100) : null };
 }
 
@@ -495,16 +533,19 @@ function destroy(id) { if (STATE.charts[id]) { STATE.charts[id].destroy(); delet
 function chartOpts({legend=false, yMax=null}={}) {
   return {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: legend ? {position:'bottom', labels:{font:{size:11}, boxWidth:12}} : {display:false},
-      tooltip: {bodyFont:{size:12}, titleFont:{size:12, weight:'600'}} },
+    plugins: {
+      legend: legend ? {position:'bottom', labels:{font:{family:'JetBrains Mono', size:10}, boxWidth:12, color:'#0f0e0c'}} : {display:false},
+      tooltip: {bodyFont:{family:'JetBrains Mono'}, titleFont:{family:'Fraunces'}}
+    },
     scales: {
-      x: {grid:{display:false}, ticks:{font:{size:11}, color:'#6b7280'}},
-      y: {beginAtZero:true, ...(yMax?{max:yMax}:{}), grid:{color:'#f3f4f6'}, ticks:{font:{size:11}, color:'#6b7280'}}
+      x: {grid:{display:false}, ticks:{font:{family:'JetBrains Mono', size:10}, color:'#6b6356'}},
+      y: {beginAtZero:true, ...(yMax?{max:yMax}:{}), grid:{color:'rgba(15,14,12,0.06)'}, ticks:{font:{family:'JetBrains Mono', size:10}, color:'#6b6356'}}
     }
   };
 }
 
 function renderAll() {
+  document.getElementById('periodHint').textContent = getWindow().label;
   renderAlert(); renderOverview(); renderOverall(); renderDesign();
   renderBranches(); renderPeople(); renderDetractors();
 }
@@ -515,65 +556,98 @@ function renderAlert() {
   const fillF = fillRateFinal(filteredFinal());
   const fillD = fillRateDesign(filteredDesign());
   let alerts = [];
-  if (fillF.rate != null && fillF.rate < 50 && fillF.eligible > 0) alerts.push({type:'bad', title:'Overall NPS fill rate is low', text:`Only ${fillF.responded} of ${fillF.eligible} eligible projects responded in ${win.label}. Score reflects a partial picture.`});
-  if (fillD.rate != null && fillD.rate < 50 && fillD.eligible > 0) alerts.push({type:'bad', title:'Design NPS fill rate is low', text:`Only ${fillD.responded} of ${fillD.eligible} eligible projects responded in ${win.label}. This is the biggest opportunity to improve.`});
-  if (alerts.length === 0 && (fillF.rate >= 70 || fillD.rate >= 70)) alerts.push({type:'good', title:'Good fill rates', text:`We're hearing from most customers — the scores are reliable for ${win.label}.`});
-  slot.innerHTML = alerts.map(a => `<div class="alert ${a.type}"><span class="alert-icon">${a.type==='bad'?'⚠️':'✅'}</span><div><strong>${a.title}</strong>${a.text}</div></div>`).join('');
+  if (fillD.rate != null && fillD.rate < 50 && fillD.eligible > 0)
+    alerts.push({type:'bad', title:'Design NPS fill rate is low', text:`Only ${fillD.responded} of ${fillD.eligible} eligible projects responded in ${win.label}. This is the biggest opportunity to improve.`});
+  if (fillF.rate != null && fillF.rate < 50 && fillF.eligible > 0)
+    alerts.push({type:'bad', title:'Overall NPS fill rate is low', text:`Only ${fillF.responded} of ${fillF.eligible} eligible projects responded in ${win.label}.`});
+  if (alerts.length === 0 && (fillF.rate >= 60 || fillD.rate >= 60))
+    alerts.push({type:'good', title:'Healthy fill rates', text:`Most customers are giving feedback — the scores are reliable for ${win.label}.`});
+  slot.innerHTML = alerts.map(a => `<div class="alert ${a.type==='good'?'good':''}"><span class="alert-icon">${a.type==='good'?'✓':'⚠'}</span><div><strong>${a.title}</strong><p>${a.text}</p></div></div>`).join('');
 }
 
 function renderOverview() {
   const f = filteredFinal(); const d = filteredDesign(); const win = getWindow();
-  const nps = computeNPS(f); const fillF = fillRateFinal(f);
-  const sat = computeDesignSat(d); const fillD = fillRateDesign(d);
+  const npsF = computeNPS(f); const fillF = fillRateFinal(f);
+  const npsD = computeNPS(d); const fillD = fillRateDesign(d);
 
-  document.getElementById('kpi-nps').textContent = nps.nps != null ? nps.nps.toFixed(1) : '—';
-  document.getElementById('kpi-nps-sub').textContent = nps.total ? `${nps.total} responses · ${win.label}` : `No responses in ${win.label}`;
+  document.getElementById('kpi-overall-nps').textContent = npsF.nps != null ? npsF.nps.toFixed(1) : '—';
+  document.getElementById('kpi-overall-nps-sub').textContent = npsF.total ? `${npsF.total} responses · ${win.label}` : `No responses in ${win.label}`;
 
-  document.getElementById('kpi-fill-final').innerHTML = (fillF.rate != null ? fillF.rate.toFixed(1) : '—') + '<span class="unit">%</span>';
-  document.getElementById('kpi-fill-final-sub').textContent = `${fillF.responded} of ${fillF.eligible} eligible projects responded`;
-  const bar1 = document.getElementById('kpi-fill-final-bar');
-  bar1.style.width = (fillF.rate || 0) + '%'; bar1.className = 'gap-bar-fill ' + fillBarColor(fillF.rate || 0);
+  document.getElementById('kpi-overall-fill').innerHTML = (fillF.rate != null ? fillF.rate.toFixed(1) : '—') + '<span class="unit">%</span>';
+  document.getElementById('kpi-overall-fill-sub').textContent = `${fillF.responded} of ${fillF.eligible} eligible projects`;
+  const bar1 = document.getElementById('kpi-overall-fill-bar');
+  bar1.style.width = (fillF.rate || 0) + '%'; bar1.className = 'gap-fill ' + fillBarColor(fillF.rate || 0);
 
-  document.getElementById('kpi-design-sat').innerHTML = (sat.satisfied != null ? sat.satisfied.toFixed(1) : '—') + '<span class="unit">%</span>';
-  document.getElementById('kpi-design-sat-sub').textContent = sat.total ? `${sat.total} responses · ${win.label}` : `No responses in ${win.label}`;
+  document.getElementById('kpi-design-nps').textContent = npsD.nps != null ? npsD.nps.toFixed(1) : '—';
+  document.getElementById('kpi-design-nps-sub').textContent = npsD.total ? `${npsD.total} responses · ${win.label}` : `No responses in ${win.label}`;
 
-  document.getElementById('kpi-fill-design').innerHTML = (fillD.rate != null ? fillD.rate.toFixed(1) : '—') + '<span class="unit">%</span>';
-  document.getElementById('kpi-fill-design-sub').textContent = `${fillD.responded} of ${fillD.eligible} eligible projects responded`;
-  const bar2 = document.getElementById('kpi-fill-design-bar');
-  bar2.style.width = (fillD.rate || 0) + '%'; bar2.className = 'gap-bar-fill ' + fillBarColor(fillD.rate || 0);
+  document.getElementById('kpi-design-fill').innerHTML = (fillD.rate != null ? fillD.rate.toFixed(1) : '—') + '<span class="unit">%</span>';
+  document.getElementById('kpi-design-fill-sub').textContent = `${fillD.responded} of ${fillD.eligible} eligible projects`;
+  const bar2 = document.getElementById('kpi-design-fill-bar');
+  bar2.style.width = (fillD.rate || 0) + '%'; bar2.className = 'gap-fill ' + fillBarColor(fillD.rate || 0);
 
-  // Monthly aggregation
-  const months = new Map();
+  // Monthly aggregation — Overall
+  const fMonths = new Map();
   f.forEach(r => {
     const date = r._feedbackDate || r._checklistDate; if (!date) return;
     const k = ymKey(date);
-    if (!months.has(k)) months.set(k, {date: new Date(date.getFullYear(), date.getMonth(), 1), elig:0, resp:0, prom:0, det:0});
-    const m = months.get(k);
+    if (!fMonths.has(k)) fMonths.set(k, {date: new Date(date.getFullYear(), date.getMonth(), 1), elig:0, resp:0, prom:0, det:0});
+    const m = fMonths.get(k);
     if (r._checklistDate || r._score != null) m.elig++;
     if (r._score != null) { m.resp++; if (r._score >= 9) m.prom++; else if (r._score <= 6) m.det++; }
   });
-  const arr = [...months.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v]) => ({
+  const fArr = [...fMonths.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v]) => ({
     ...v, nps: v.resp ? ((v.prom-v.det)/v.resp*100) : null, fill: v.elig ? (v.resp/v.elig*100) : null,
   }));
 
+  // Monthly — Design
+  const dMonths = new Map();
+  d.forEach(r => {
+    const date = r._feedbackDate || r._signoffDate; if (!date) return;
+    const k = ymKey(date);
+    if (!dMonths.has(k)) dMonths.set(k, {date: new Date(date.getFullYear(), date.getMonth(), 1), elig:0, resp:0, prom:0, det:0});
+    const m = dMonths.get(k);
+    if (r._signoffDate || r._score != null) m.elig++;
+    if (r._score != null) { m.resp++; if (r._score >= 9) m.prom++; else if (r._score <= 6) m.det++; }
+  });
+  const dArr = [...dMonths.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v]) => ({
+    ...v, nps: v.resp ? ((v.prom-v.det)/v.resp*100) : null, fill: v.elig ? (v.resp/v.elig*100) : null,
+  }));
+
+  // Align labels using the union of both series
+  const allKeys = [...new Set([...fMonths.keys(), ...dMonths.keys()])].sort();
+  const labels = allKeys.map(k => ymLabel(new Date(parseInt(k.slice(0,4)), parseInt(k.slice(5,7))-1, 1)));
+  const fByKey = new Map(fArr.map(m => [ymKey(m.date), m]));
+  const dByKey = new Map(dArr.map(m => [ymKey(m.date), m]));
+
   destroy('chart-nps-trend');
   STATE.charts['chart-nps-trend'] = new Chart(document.getElementById('chart-nps-trend'), {
-    type:'line', data:{labels:arr.map(m=>ymLabel(m.date)), datasets:[{
-      label:'NPS', data:arr.map(m=>m.nps), borderColor:'#1e40af', backgroundColor:'rgba(30,64,175,0.08)', borderWidth:2, tension:0.3, fill:true, pointRadius:3,
-    }]}, options: chartOpts({})
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Overall NPS', data: allKeys.map(k => fByKey.get(k)?.nps ?? null), borderColor: '#0f0e0c', backgroundColor: 'rgba(15,14,12,0.05)', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false, spanGaps: true },
+      { label: 'Design NPS', data: allKeys.map(k => dByKey.get(k)?.nps ?? null), borderColor: '#c2410c', backgroundColor: 'rgba(194,65,12,0.05)', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false, spanGaps: true },
+    ]},
+    options: chartOpts({legend: true})
   });
+
   destroy('chart-fill-trend');
   STATE.charts['chart-fill-trend'] = new Chart(document.getElementById('chart-fill-trend'), {
-    type:'line', data:{labels:arr.map(m=>ymLabel(m.date)), datasets:[{
-      label:'Fill Rate %', data:arr.map(m=>m.fill), borderColor:'#dc2626', backgroundColor:'rgba(220,38,38,0.08)', borderWidth:2, tension:0.3, fill:true, pointRadius:3,
-    }]}, options: chartOpts({yMax:100})
+    type: 'line',
+    data: { labels, datasets: [
+      { label: 'Overall Fill %', data: allKeys.map(k => fByKey.get(k)?.fill ?? null), borderColor: '#0f0e0c', backgroundColor: 'rgba(15,14,12,0.05)', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false, spanGaps: true },
+      { label: 'Design Fill %', data: allKeys.map(k => dByKey.get(k)?.fill ?? null), borderColor: '#c2410c', backgroundColor: 'rgba(194,65,12,0.05)', borderWidth: 2, tension: 0.3, pointRadius: 3, fill: false, spanGaps: true },
+    ]},
+    options: chartOpts({legend: true, yMax: 100})
   });
+
   destroy('chart-volume');
   STATE.charts['chart-volume'] = new Chart(document.getElementById('chart-volume'), {
-    type:'bar', data:{labels:arr.map(m=>ymLabel(m.date)), datasets:[
-      {label:'Eligible', data:arr.map(m=>m.elig), backgroundColor:'#93c5fd'},
-      {label:'Responded', data:arr.map(m=>m.resp), backgroundColor:'#dc2626'},
-    ]}, options: chartOpts({legend:true})
+    type: 'bar',
+    data: { labels: fArr.map(m=>ymLabel(m.date)), datasets: [
+      { label: 'Eligible Projects', data: fArr.map(m=>m.elig), backgroundColor: '#d4c5a8' },
+      { label: 'Responded', data: fArr.map(m=>m.resp), backgroundColor: '#c2410c' },
+    ]},
+    options: chartOpts({legend: true})
   });
 }
 
@@ -591,52 +665,37 @@ function renderOverall() {
 
   const hist = Array(11).fill(0);
   f.forEach(r => { if (r._score != null && r._score >= 0 && r._score <= 10) hist[Math.round(r._score)]++; });
-  destroy('chart-hist');
-  STATE.charts['chart-hist'] = new Chart(document.getElementById('chart-hist'), {
-    type:'bar', data:{labels:['0','1','2','3','4','5','6','7','8','9','10'], datasets:[{
-      data: hist, backgroundColor: hist.map((_,i)=> i<=6?'#dc2626':i<=8?'#d97706':'#16a34a'),
-    }]}, options: chartOpts({})
+  destroy('chart-overall-hist');
+  STATE.charts['chart-overall-hist'] = new Chart(document.getElementById('chart-overall-hist'), {
+    type: 'bar',
+    data: { labels: ['0','1','2','3','4','5','6','7','8','9','10'], datasets: [{
+      data: hist, backgroundColor: hist.map((_,i) => i<=6 ? '#a8341c' : i<=8 ? '#b8860b' : '#2d5d3a'),
+    }]},
+    options: chartOpts({})
   });
 }
 
 function renderDesign() {
   const d = filteredDesign(); const win = getWindow();
-  const sat = computeDesignSat(d);
-  document.getElementById('d-sat').innerHTML = (sat.satisfied != null ? sat.satisfied.toFixed(1) : '—') + '<span class="unit">%</span>';
-  document.getElementById('d-sat-sub').textContent = sat.total ? `${sat.total} responses · ${win.label}` : `No responses in ${win.label}`;
-  document.getElementById('d-es').textContent = fmtNum(sat.counts['Extremely Satisfied']);
-  document.getElementById('d-es-sub').textContent = sat.total ? fmtPct(sat.counts['Extremely Satisfied']/sat.total*100) + ' of responses' : '—';
-  document.getElementById('d-s').textContent = fmtNum(sat.counts['Satisfied']);
-  document.getElementById('d-s-sub').textContent = sat.total ? fmtPct(sat.counts['Satisfied']/sat.total*100) + ' of responses' : '—';
-  const disappointed = (sat.counts['Disappointed']||0) + (sat.counts['Extremely Disappointed']||0);
-  document.getElementById('d-d').textContent = fmtNum(disappointed);
-  document.getElementById('d-d-sub').textContent = sat.total ? fmtPct(disappointed/sat.total*100) + ' of responses' : '—';
+  const nps = computeNPS(d);
+  document.getElementById('d-nps').textContent = nps.nps != null ? nps.nps.toFixed(1) : '—';
+  document.getElementById('d-nps-sub').textContent = nps.total ? `${nps.total} responses · ${win.label}` : `No responses in ${win.label}`;
+  document.getElementById('d-prom').textContent = fmtNum(nps.prom);
+  document.getElementById('d-prom-sub').textContent = nps.total ? fmtPct(nps.prom/nps.total*100) + ' of responses' : '—';
+  document.getElementById('d-pass').textContent = fmtNum(nps.pass);
+  document.getElementById('d-pass-sub').textContent = nps.total ? fmtPct(nps.pass/nps.total*100) + ' of responses' : '—';
+  document.getElementById('d-det').textContent = fmtNum(nps.det);
+  document.getElementById('d-det-sub').textContent = nps.total ? fmtPct(nps.det/nps.total*100) + ' of responses' : '—';
 
-  destroy('chart-design-bars');
-  if (sat.total > 0) {
-    STATE.charts['chart-design-bars'] = new Chart(document.getElementById('chart-design-bars'), {
-      type:'bar', data:{labels:RATINGS, datasets:[{
-        data:RATINGS.map(r=>sat.counts[r]),
-        backgroundColor:['#16a34a','#86efac','#d1d5db','#fca5a5','#dc2626'],
-      }]}, options:{...chartOpts({}), indexAxis:'y'}
-    });
-  }
-
-  const months = new Map();
-  d.forEach(r => {
-    if (!r._rating || !RATINGS.includes(r._rating)) return;
-    const date = r._feedbackDate || r._signoffDate; if (!date) return;
-    const k = ymKey(date);
-    if (!months.has(k)) months.set(k, {date:new Date(date.getFullYear(), date.getMonth(), 1), total:0, pos:0});
-    const m = months.get(k); m.total++;
-    if (r._rating === 'Extremely Satisfied' || r._rating === 'Satisfied') m.pos++;
-  });
-  const arr = [...months.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,v]) => ({...v, satPct: v.total ? (v.pos/v.total*100) : null}));
-  destroy('chart-design-trend');
-  STATE.charts['chart-design-trend'] = new Chart(document.getElementById('chart-design-trend'), {
-    type:'line', data:{labels:arr.map(m=>ymLabel(m.date)), datasets:[{
-      data:arr.map(m=>m.satPct), borderColor:'#16a34a', backgroundColor:'rgba(22,163,74,0.08)', borderWidth:2, tension:0.3, fill:true, pointRadius:3,
-    }]}, options: chartOpts({yMax:100})
+  const hist = Array(11).fill(0);
+  d.forEach(r => { if (r._score != null && r._score >= 0 && r._score <= 10) hist[Math.round(r._score)]++; });
+  destroy('chart-design-hist');
+  STATE.charts['chart-design-hist'] = new Chart(document.getElementById('chart-design-hist'), {
+    type: 'bar',
+    data: { labels: ['0','1','2','3','4','5','6','7','8','9','10'], datasets: [{
+      data: hist, backgroundColor: hist.map((_,i) => i<=6 ? '#a8341c' : i<=8 ? '#b8860b' : '#2d5d3a'),
+    }]},
+    options: chartOpts({})
   });
 }
 
@@ -655,13 +714,13 @@ function renderBranches() {
     <tr>
       <td class="name">${r.branch}</td>
       <td class="num">${fmtNum(r.total)}</td>
-      <td class="num"><span class="badge good">${r.prom}</span></td>
-      <td class="num"><span class="badge bad">${r.det}</span></td>
+      <td class="num"><span class="badge badge-good">${r.prom}</span></td>
+      <td class="num"><span class="badge badge-bad">${r.det}</span></td>
       <td class="num"><strong>${r.nps != null ? r.nps.toFixed(1) : '—'}</strong></td>
       <td class="num">
-        <div class="mini-bar">
+        <div class="bar-cell">
           <span>${fmtPct(r.fillRate)}</span>
-          <div class="mini-bar-track"><div class="mini-bar-fill ${fillBarColor(r.fillRate||0)}" style="width:${Math.min(r.fillRate||0,100)}%"></div></div>
+          <div class="bar-track"><div class="bar-fill ${fillBarColor(r.fillRate||0)}" style="width:${Math.min(r.fillRate||0,100)}%"></div></div>
         </div>
       </td>
     </tr>
@@ -677,20 +736,20 @@ function renderPeople() {
   const groups = {};
   rows.forEach(r => { const name = (r[roleKey]||'').trim(); if (!name) return; if (!groups[name]) groups[name] = []; groups[name].push(r); });
   let agg = Object.entries(groups).map(([name, list]) => {
-    if (source === 'final') { const n = computeNPS(list); return { name, total:n.total, prom:n.prom, det:n.det, score:n.nps }; }
-    else { const s = computeDesignSat(list); return { name, total:s.total, prom:(s.counts['Extremely Satisfied']||0)+(s.counts['Satisfied']||0), det:(s.counts['Disappointed']||0)+(s.counts['Extremely Disappointed']||0), score:s.satisfied }; }
+    const n = computeNPS(list);
+    return { name, total:n.total, prom:n.prom, det:n.det, score:n.nps };
   }).filter(a => a.total >= 5).sort((a,b) => (b.score ?? -200) - (a.score ?? -200));
 
   const tbody = document.querySelector('#people-table tbody');
   if (!agg.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty">No one has 5+ responses in the current filter.</td></tr>'; return; }
   tbody.innerHTML = agg.map((p,i) => `
     <tr>
-      <td>${i+1}</td>
+      <td>${String(i+1).padStart(2,'0')}</td>
       <td class="name">${p.name}</td>
       <td class="num">${p.total}</td>
-      <td class="num"><span class="badge good">${p.prom}</span></td>
-      <td class="num"><span class="badge bad">${p.det}</span></td>
-      <td class="num"><strong>${p.score != null ? p.score.toFixed(1) : '—'}${source==='design'?'%':''}</strong></td>
+      <td class="num"><span class="badge badge-good">${p.prom}</span></td>
+      <td class="num"><span class="badge badge-bad">${p.det}</span></td>
+      <td class="num"><strong>${p.score != null ? p.score.toFixed(1) : '—'}</strong></td>
     </tr>
   `).join('');
 }
@@ -698,18 +757,13 @@ function renderPeople() {
 function renderDetractors() {
   const source = STATE.detSource;
   const list = document.getElementById('det-list');
-  let dets;
-  if (source === 'final') {
-    dets = filteredFinal().filter(r => r._score != null && r._score <= 6).sort((a,b) => (b._feedbackDate||0) - (a._feedbackDate||0));
-    document.getElementById('det-title').textContent = 'Overall NPS — Detractors (0-6)';
-  } else {
-    dets = filteredDesign().filter(r => r._rating === 'Disappointed' || r._rating === 'Extremely Disappointed').sort((a,b) => (b._feedbackDate||0) - (a._feedbackDate||0));
-    document.getElementById('det-title').textContent = 'Design NPS — Disappointed customers';
-  }
+  const rows = source === 'final' ? filteredFinal() : filteredDesign();
+  const dets = rows.filter(r => r._score != null && r._score <= 6).sort((a,b) => (b._feedbackDate||0) - (a._feedbackDate||0));
+  document.getElementById('det-title').textContent = source === 'final' ? 'Overall NPS — Detractors (0-6)' : 'Design NPS — Detractors (0-6)';
   document.getElementById('det-count').textContent = `${dets.length} flagged · most recent first`;
+
   if (!dets.length) { list.innerHTML = '<div class="empty">No detractors in current filter. ✨</div>'; return; }
   list.innerHTML = dets.slice(0, 100).map(r => {
-    const score = source === 'final' ? `${r._score}/10` : r._rating;
     const date = r._feedbackDate ? r._feedbackDate.toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '—';
     const owner = source === 'final' ? (r._pm || r._designer || r._crm || '—') : (r._designer || r._crm || '—');
     return `
@@ -719,7 +773,7 @@ function renderDetractors() {
             <div class="det-customer">${r._customer || 'Unnamed'}</div>
             <div class="det-meta">PID ${r._pid} · ${r._branch || '—'} · ${owner} · ${date}</div>
           </div>
-          <div class="det-score">${score}</div>
+          <div class="det-score">${r._score}/10</div>
         </div>
         ${r._comment ? `<div class="det-comment">${escapeHtml(r._comment)}</div>` : ''}
       </div>
@@ -731,7 +785,7 @@ function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;'
 
 function exportDetractors() {
   const f = filteredFinal().filter(r => r._score != null && r._score <= 6);
-  const d = filteredDesign().filter(r => r._rating === 'Disappointed' || r._rating === 'Extremely Disappointed');
+  const d = filteredDesign().filter(r => r._score != null && r._score <= 6);
   const fSheet = f.map(r => ({
     'PID':r._pid, 'Customer':r._customer, 'Branch':r._branch,
     'Designer':r._designer, 'PM':r._pm, 'CRM':r._crm, 'Design Manager':r._dm,
@@ -740,36 +794,33 @@ function exportDetractors() {
   const dSheet = d.map(r => ({
     'PID':r._pid, 'Customer':r._customer, 'Branch':r._branch,
     'Designer':r._designer, 'CRM':r._crm, 'Design Manager':r._dm,
-    'Rating':r._rating, 'Date':r._feedbackDate ? r._feedbackDate.toISOString().slice(0,10) : '', 'Comment':r._comment,
+    'Score':r._score, 'Date':r._feedbackDate ? r._feedbackDate.toISOString().slice(0,10) : '', 'Comment':r._comment,
   }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fSheet), 'Overall NPS Detractors');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dSheet), 'Design Disappointed');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(dSheet), 'Design NPS Detractors');
   XLSX.writeFile(wb, `nps_detractors_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-document.querySelectorAll('.tabs button').forEach(btn => {
+document.querySelectorAll('.tab-bar button').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
     btn.classList.add('active');
     document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
   });
 });
-document.querySelector('.tabs button[data-tab="overview"]').click();
+document.querySelector('.tab-bar button[data-tab="overview"]').click();
 
-document.querySelectorAll('#windowSeg button').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('#windowSeg button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const w = btn.dataset.window;
-    if (w === 'fortnight') STATE.windowMode = 'fortnight';
-    else if (w === 'all') { STATE.windowMode = 'days'; STATE.windowDays = 'all'; }
-    else { STATE.windowMode = 'days'; STATE.windowDays = parseInt(w); }
-    renderAll();
-  });
-});
-
+document.querySelectorAll('#windowSeg button').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('#windowSeg button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const w = btn.dataset.window;
+  if (w === 'fortnight') STATE.windowMode = 'fortnight';
+  else if (w === 'all') { STATE.windowMode = 'days'; STATE.windowDays = 'all'; }
+  else { STATE.windowMode = 'days'; STATE.windowDays = parseInt(w); }
+  renderAll();
+}));
 document.getElementById('branchFilter').addEventListener('change', e => { STATE.branchFilter = e.target.value; renderAll(); });
 document.querySelectorAll('#people-role-seg button').forEach(btn => btn.addEventListener('click', () => {
   document.querySelectorAll('#people-role-seg button').forEach(b => b.classList.remove('active'));
@@ -783,7 +834,6 @@ document.querySelectorAll('#det-source-seg button').forEach(btn => btn.addEventL
   document.querySelectorAll('#det-source-seg button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active'); STATE.detSource = btn.dataset.source; renderDetractors();
 }));
-
 document.getElementById('refreshBtn').addEventListener('click', loadAll);
 document.getElementById('exportBtn').addEventListener('click', exportDetractors);
 
