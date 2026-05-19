@@ -244,8 +244,8 @@
     </div>
     <div class="kpi">
       <div>
-        <div class="kpi-label">Design CSAT</div>
-        <div class="kpi-value" id="kpi-csat">—<span class="unit">%</span></div>
+        <div class="kpi-label">Design Net Satisfaction</div>
+        <div class="kpi-value" id="kpi-csat">—</div>
       </div>
       <div class="kpi-sub" id="kpi-csat-sub">—</div>
     </div>
@@ -802,36 +802,38 @@ function renderOverviewKPIs() {
     document.getElementById('kpi-nps-sub').innerHTML = `No responses this fortnight yet · showing window avg (${fWin.total} resp.)`;
   }
 
-  // === Design CX Satisfaction === (Bug 1 fix: fall back to window when fortnight is empty)
+  // === Design Net Satisfaction === (replaces CSAT)
   const dCurr = dAll.filter(r => r._feedbackDate && r._feedbackDate >= curr.start && r._feedbackDate <= curr.end && r._rating);
   const dPrev = dAll.filter(r => r._feedbackDate && r._feedbackDate >= prev.start && r._feedbackDate <= prev.end && r._rating);
-  const csatC = computeDesign(dCurr).csat;
-  const csatP = computeDesign(dPrev).csat;
+  const netC = computeDesign(dCurr).netSat;
+  const netP = computeDesign(dPrev).netSat;
 
   if (dCurr.length > 0) {
-    document.getElementById('kpi-csat').innerHTML = (csatC != null ? csatC.toFixed(1) : '—') + '<span class="unit">%</span>';
-    document.getElementById('kpi-csat-sub').innerHTML = `Current fortnight · ${dCurr.length} responses ${deltaBadge(csatC, csatP)}`;
+    document.getElementById('kpi-csat').innerHTML = netC != null ? netC.toFixed(1) : '—';
+    document.getElementById('kpi-csat-sub').innerHTML = `Current fortnight · ${dCurr.length} responses ${deltaBadge(netC, netP)}`;
   } else {
     const dWin = computeDesign(dAll);
-    document.getElementById('kpi-csat').innerHTML = (dWin.csat != null ? dWin.csat.toFixed(1) : '—') + '<span class="unit">%</span>';
+    document.getElementById('kpi-csat').innerHTML = dWin.netSat != null ? dWin.netSat.toFixed(1) : '—';
     document.getElementById('kpi-csat-sub').innerHTML = `No responses this fortnight yet · showing window avg (${dWin.total} resp.)`;
   }
 
-  // === Final Fill Rate === (Bug 2 fix: use Customer Checklist Signed as eligibility, not Feedback Sent Date)
-  // The CSV mostly only contains responded rows, so sent-vs-responded would give a misleading 100%.
-  // Real eligibility = projects whose Customer Checklist was signed in the window (project is complete and survey-ready).
-  const fEligible = fAll.filter(r => r._checklistDate).length;
+  // === Final Fill Rate === (Bug 2 fix: eligible = (CCS signed) OR (responded), so fill rate <= 100%)
+  // The CSV only contains rows where a response was received, plus rows where Customer Checklist
+  // was signed (project complete). Eligible projects = union of both sets.
+  // Some older responded rows pre-date the CCS field being tracked, so we include them as eligible.
+  const fEligible = fAll.filter(r => r._checklistDate || r._score != null).length;
   const fResponded = fAll.filter(r => r._score != null).length;
   const fFill = fEligible ? (fResponded/fEligible*100) : null;
   document.getElementById('kpi-fill-final').innerHTML = (fFill != null ? fFill.toFixed(1) : '—') + '<span class="unit">%</span>';
   document.getElementById('kpi-fill-final-sub').textContent = `${fResponded.toLocaleString()} of ${fEligible.toLocaleString()} eligible projects`;
 
   // === Design Fill Rate === — uses Survey Sent Date which IS in the file
-  const dSent = dAll.filter(r => r._sentDate).length;
+  // Same safety: eligible = (sent) OR (responded)
+  const dSentOrResponded = dAll.filter(r => r._sentDate || r._rating).length;
   const dResp = dAll.filter(r => r._rating).length;
-  const dFill = dSent ? (dResp/dSent*100) : null;
+  const dFill = dSentOrResponded ? (dResp/dSentOrResponded*100) : null;
   document.getElementById('kpi-fill-design').innerHTML = (dFill != null ? dFill.toFixed(1) : '—') + '<span class="unit">%</span>';
-  document.getElementById('kpi-fill-design-sub').textContent = `${dResp.toLocaleString()} of ${dSent.toLocaleString()} surveys sent`;
+  document.getElementById('kpi-fill-design-sub').textContent = `${dResp.toLocaleString()} of ${dSentOrResponded.toLocaleString()} surveys sent`;
 }
 
 function deltaBadge(curr, prev) {
