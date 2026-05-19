@@ -161,12 +161,20 @@
 
 <div class="controls">
   <div class="seg" id="windowSeg">
-    <button data-window="fortnight">Fortnight</button>
+    <button data-window="fortnight" id="fortnightBtn">Fortnight ▾</button>
     <button data-window="90">3 Mo</button>
     <button data-window="180">6 Mo</button>
     <button class="active" data-window="365">12 Mo</button>
     <button data-window="all">All Time</button>
   </div>
+  <select class="filter" id="fortnightSelect" style="display:none;">
+    <option value="current">Current Fortnight</option>
+    <option value="prev">Previous Fortnight</option>
+    <option value="m1-1">Last Month · 1st half</option>
+    <option value="m1-2">Last Month · 2nd half</option>
+    <option value="m2-1">2 Months Ago · 1st half</option>
+    <option value="m2-2">2 Months Ago · 2nd half</option>
+  </select>
   <select class="filter" id="branchFilter">
     <option value="all">All Branches</option>
   </select>
@@ -254,9 +262,32 @@
   </div>
 
   <div class="chart-card">
-    <h3>Eligible vs Responded — Monthly Volume</h3>
-    <div class="chart-sub">Overall NPS · gap between bars = the opportunity</div>
+    <h3>Eligible vs Responded — Overall NPS</h3>
+    <div class="chart-sub">Monthly volume · gap between bars = the opportunity</div>
     <div class="chart-wrap tall"><canvas id="chart-volume"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Eligible vs Responded — Design NPS</h3>
+    <div class="chart-sub">Monthly volume · eligibility based on 3D Sign-Off Date</div>
+    <div class="chart-wrap tall"><canvas id="chart-volume-design"></canvas></div>
+  </div>
+
+  <div class="section-head"><span class="num">03</span><h2>Fortnight Compare</h2><div class="rule"></div><span class="hint">always vs the last two fortnights</span></div>
+
+  <div class="table-card">
+    <div class="table-head"><h3>Fortnight Comparison</h3><span class="meta">independent of selected window</span></div>
+    <table class="data" id="fortnight-compare-table">
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th class="num" id="fc-curr-label">Current</th>
+          <th class="num" id="fc-prev-label">Previous</th>
+          <th class="num" id="fc-prev2-label">Two Ago</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 </section>
 
@@ -403,6 +434,7 @@ const CONFIG = {
 const STATE = {
   finalRows: [], designRows: [],
   windowDays: 365, windowMode: 'days',
+  fortnightChoice: 'current',
   branchFilter: 'all',
   peopleRole: 'Designer', peopleSource: 'final',
   detSource: 'final',
@@ -427,12 +459,53 @@ function findCol(row, keywords) {
   return null;
 }
 
+function fortnightBoundsFor(year, month, half) {
+  // half: 1 = days 1-15, 2 = days 16-end-of-month
+  if (half === 1) return { start: new Date(year, month, 1), end: new Date(year, month, 15, 23, 59, 59) };
+  return { start: new Date(year, month, 16), end: new Date(year, month+1, 0, 23, 59, 59) };
+}
+
+function currentFortnight() {
+  const now = new Date();
+  const half = now.getDate() <= 15 ? 1 : 2;
+  const b = fortnightBoundsFor(now.getFullYear(), now.getMonth(), half);
+  return { ...b, year: now.getFullYear(), month: now.getMonth(), half };
+}
+
+function previousFortnight(curr) {
+  if (curr.half === 2) {
+    const b = fortnightBoundsFor(curr.year, curr.month, 1);
+    return { ...b, year: curr.year, month: curr.month, half: 1 };
+  }
+  // current is 1st half → previous is 2nd half of previous month
+  const prevMonth = curr.month - 1 < 0 ? 11 : curr.month - 1;
+  const prevYear = curr.month - 1 < 0 ? curr.year - 1 : curr.year;
+  const b = fortnightBoundsFor(prevYear, prevMonth, 2);
+  return { ...b, year: prevYear, month: prevMonth, half: 2 };
+}
+
+function fortnightLabel(fn) {
+  const monthName = new Date(fn.year, fn.month, 1).toLocaleDateString('en-US', {month:'short', year:'2-digit'});
+  return `${monthName} · ${fn.half === 1 ? '1st half' : '2nd half'}`;
+}
+
 function getWindow() {
   const now = new Date();
   if (STATE.windowMode === 'fortnight') {
-    const d = now.getDate();
-    if (d <= 15) return { start: new Date(now.getFullYear(), now.getMonth(), 1), end: new Date(now.getFullYear(), now.getMonth(), 15, 23, 59, 59), label: 'this fortnight' };
-    return { start: new Date(now.getFullYear(), now.getMonth(), 16), end: new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59), label: 'this fortnight' };
+    const choice = STATE.fortnightChoice || 'current';
+    let fn;
+    if (choice === 'current') fn = currentFortnight();
+    else if (choice === 'prev') fn = previousFortnight(currentFortnight());
+    else {
+      // m1-1, m1-2, m2-1, m2-2
+      const [monthsBack, half] = choice.split('-').map(s => parseInt(s.replace('m','')));
+      const targetMonth = now.getMonth() - monthsBack;
+      const year = targetMonth < 0 ? now.getFullYear() - 1 : now.getFullYear();
+      const month = (targetMonth + 12) % 12;
+      const b = fortnightBoundsFor(year, month, half);
+      fn = { ...b, year, month, half };
+    }
+    return { start: fn.start, end: fn.end, label: fortnightLabel(fn) };
   }
   if (STATE.windowDays === 'all') return { start: new Date(2000, 0, 1), end: now, label: 'all time' };
   const start = new Date(now); start.setDate(start.getDate() - STATE.windowDays);
@@ -649,6 +722,70 @@ function renderOverview() {
     ]},
     options: chartOpts({legend: true})
   });
+
+  destroy('chart-volume-design');
+  STATE.charts['chart-volume-design'] = new Chart(document.getElementById('chart-volume-design'), {
+    type: 'bar',
+    data: { labels: dArr.map(m=>ymLabel(m.date)), datasets: [
+      { label: 'Eligible Projects', data: dArr.map(m=>m.elig), backgroundColor: '#d4c5a8' },
+      { label: 'Responded', data: dArr.map(m=>m.resp), backgroundColor: '#c2410c' },
+    ]},
+    options: chartOpts({legend: true})
+  });
+
+  renderFortnightCompare();
+}
+
+function renderFortnightCompare() {
+  // Compute stats for: current, previous, two-ago fortnights
+  const curr = currentFortnight();
+  const prev = previousFortnight(curr);
+  const prev2 = previousFortnight(prev);
+
+  document.getElementById('fc-curr-label').textContent = fortnightLabel(curr);
+  document.getElementById('fc-prev-label').textContent = fortnightLabel(prev);
+  document.getElementById('fc-prev2-label').textContent = fortnightLabel(prev2);
+
+  function statsForFortnight(fn) {
+    // Apply branch filter only (not the global window)
+    const fRows = STATE.finalRows.filter(r => {
+      if (STATE.branchFilter !== 'all' && r._branch !== STATE.branchFilter) return false;
+      return (r._feedbackDate && r._feedbackDate >= fn.start && r._feedbackDate <= fn.end) ||
+             (r._checklistDate && r._checklistDate >= fn.start && r._checklistDate <= fn.end);
+    });
+    const dRows = STATE.designRows.filter(r => {
+      if (STATE.branchFilter !== 'all' && r._branch !== STATE.branchFilter) return false;
+      return (r._feedbackDate && r._feedbackDate >= fn.start && r._feedbackDate <= fn.end) ||
+             (r._signoffDate && r._signoffDate >= fn.start && r._signoffDate <= fn.end);
+    });
+    const fNps = computeNPS(fRows); const fFill = fillRateFinal(fRows);
+    const dNps = computeNPS(dRows); const dFill = fillRateDesign(dRows);
+    return {
+      overallEligible: fFill.eligible, overallResponded: fFill.responded, overallFill: fFill.rate, overallNps: fNps.nps,
+      designEligible: dFill.eligible, designResponded: dFill.responded, designFill: dFill.rate, designNps: dNps.nps,
+    };
+  }
+
+  const c = statsForFortnight(curr);
+  const p = statsForFortnight(prev);
+  const p2 = statsForFortnight(prev2);
+
+  const tbody = document.querySelector('#fortnight-compare-table tbody');
+  const fmtCell = (v, isPercent) => v == null ? '—' : (isPercent ? v.toFixed(1) + '%' : v.toFixed(1));
+  const fmtCount = v => v == null ? '—' : v.toLocaleString('en-IN');
+
+  tbody.innerHTML = `
+    <tr><td class="name" style="font-family:'Fraunces',serif;font-style:italic;color:var(--accent);">— Overall NPS —</td><td class="num"></td><td class="num"></td><td class="num"></td></tr>
+    <tr><td>Eligible PIDs</td><td class="num">${fmtCount(c.overallEligible)}</td><td class="num">${fmtCount(p.overallEligible)}</td><td class="num">${fmtCount(p2.overallEligible)}</td></tr>
+    <tr><td>Responded</td><td class="num">${fmtCount(c.overallResponded)}</td><td class="num">${fmtCount(p.overallResponded)}</td><td class="num">${fmtCount(p2.overallResponded)}</td></tr>
+    <tr><td>Fill Rate</td><td class="num">${fmtCell(c.overallFill, true)}</td><td class="num">${fmtCell(p.overallFill, true)}</td><td class="num">${fmtCell(p2.overallFill, true)}</td></tr>
+    <tr><td><strong>NPS Score</strong></td><td class="num"><strong>${fmtCell(c.overallNps, false)}</strong></td><td class="num"><strong>${fmtCell(p.overallNps, false)}</strong></td><td class="num"><strong>${fmtCell(p2.overallNps, false)}</strong></td></tr>
+    <tr><td class="name" style="font-family:'Fraunces',serif;font-style:italic;color:var(--accent);">— Design NPS —</td><td class="num"></td><td class="num"></td><td class="num"></td></tr>
+    <tr><td>Eligible PIDs</td><td class="num">${fmtCount(c.designEligible)}</td><td class="num">${fmtCount(p.designEligible)}</td><td class="num">${fmtCount(p2.designEligible)}</td></tr>
+    <tr><td>Responded</td><td class="num">${fmtCount(c.designResponded)}</td><td class="num">${fmtCount(p.designResponded)}</td><td class="num">${fmtCount(p2.designResponded)}</td></tr>
+    <tr><td>Fill Rate</td><td class="num">${fmtCell(c.designFill, true)}</td><td class="num">${fmtCell(p.designFill, true)}</td><td class="num">${fmtCell(p2.designFill, true)}</td></tr>
+    <tr><td><strong>NPS Score</strong></td><td class="num"><strong>${fmtCell(c.designNps, false)}</strong></td><td class="num"><strong>${fmtCell(p.designNps, false)}</strong></td><td class="num"><strong>${fmtCell(p2.designNps, false)}</strong></td></tr>
+  `;
 }
 
 function renderOverall() {
@@ -816,11 +953,22 @@ document.querySelectorAll('#windowSeg button').forEach(btn => btn.addEventListen
   document.querySelectorAll('#windowSeg button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const w = btn.dataset.window;
-  if (w === 'fortnight') STATE.windowMode = 'fortnight';
-  else if (w === 'all') { STATE.windowMode = 'days'; STATE.windowDays = 'all'; }
-  else { STATE.windowMode = 'days'; STATE.windowDays = parseInt(w); }
+  const fnSelect = document.getElementById('fortnightSelect');
+  if (w === 'fortnight') {
+    STATE.windowMode = 'fortnight';
+    fnSelect.style.display = '';
+    STATE.fortnightChoice = fnSelect.value;
+  } else {
+    fnSelect.style.display = 'none';
+    if (w === 'all') { STATE.windowMode = 'days'; STATE.windowDays = 'all'; }
+    else { STATE.windowMode = 'days'; STATE.windowDays = parseInt(w); }
+  }
   renderAll();
 }));
+document.getElementById('fortnightSelect').addEventListener('change', e => {
+  STATE.fortnightChoice = e.target.value;
+  if (STATE.windowMode === 'fortnight') renderAll();
+});
 document.getElementById('branchFilter').addEventListener('change', e => { STATE.branchFilter = e.target.value; renderAll(); });
 document.querySelectorAll('#people-role-seg button').forEach(btn => btn.addEventListener('click', () => {
   document.querySelectorAll('#people-role-seg button').forEach(b => b.classList.remove('active'));
