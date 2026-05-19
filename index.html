@@ -182,7 +182,7 @@
 <header class="masthead">
   <div class="masthead-top">
     <div class="meta">
-      
+      <span>Vol. I</span>
       <span id="todayDate">—</span>
       <span>Bonito Designs</span>
     </div>
@@ -191,7 +191,7 @@
     </div>
   </div>
   <h1 class="title">NPS <em>Intelligence</em></h1>
-  
+  <p class="tagline">A fortnightly account of how our customers feel — and how often they tell us.</p>
 </header>
 
 <div class="controls">
@@ -244,7 +244,7 @@
     </div>
     <div class="kpi">
       <div>
-        <div class="kpi-label">Design CX Satisfaction</div>
+        <div class="kpi-label">Design CSAT</div>
         <div class="kpi-value" id="kpi-csat">—<span class="unit">%</span></div>
       </div>
       <div class="kpi-sub" id="kpi-csat-sub">—</div>
@@ -786,33 +786,52 @@ function renderOverviewKPIs() {
   const curr = fortnightBounds(now);
   const prev = previousFortnight(curr);
 
+  // === Overall NPS Score ===
+  // Try current fortnight first; if empty, fall back to selected window
   const fCurr = fAll.filter(r => r._feedbackDate && r._feedbackDate >= curr.start && r._feedbackDate <= curr.end);
   const fPrev = fAll.filter(r => r._feedbackDate && r._feedbackDate >= prev.start && r._feedbackDate <= prev.end);
   const npsC = computeNPS(fCurr).nps;
   const npsP = computeNPS(fPrev).nps;
 
-  document.getElementById('kpi-nps').innerHTML = (npsC != null ? npsC.toFixed(1) : '—');
-  document.getElementById('kpi-nps-sub').innerHTML = `Current fortnight · ${fCurr.length} responses ${deltaBadge(npsC, npsP)}`;
+  if (fCurr.length > 0) {
+    document.getElementById('kpi-nps').innerHTML = npsC != null ? npsC.toFixed(1) : '—';
+    document.getElementById('kpi-nps-sub').innerHTML = `Current fortnight · ${fCurr.length} responses ${deltaBadge(npsC, npsP)}`;
+  } else {
+    const fWin = computeNPS(fAll);
+    document.getElementById('kpi-nps').innerHTML = fWin.nps != null ? fWin.nps.toFixed(1) : '—';
+    document.getElementById('kpi-nps-sub').innerHTML = `No responses this fortnight yet · showing window avg (${fWin.total} resp.)`;
+  }
 
-  const dCurr = dAll.filter(r => r._feedbackDate && r._feedbackDate >= curr.start && r._feedbackDate <= curr.end);
-  const dPrev = dAll.filter(r => r._feedbackDate && r._feedbackDate >= prev.start && r._feedbackDate <= prev.end);
+  // === Design CX Satisfaction === (Bug 1 fix: fall back to window when fortnight is empty)
+  const dCurr = dAll.filter(r => r._feedbackDate && r._feedbackDate >= curr.start && r._feedbackDate <= curr.end && r._rating);
+  const dPrev = dAll.filter(r => r._feedbackDate && r._feedbackDate >= prev.start && r._feedbackDate <= prev.end && r._rating);
   const csatC = computeDesign(dCurr).csat;
   const csatP = computeDesign(dPrev).csat;
-  document.getElementById('kpi-csat').innerHTML = (csatC != null ? csatC.toFixed(1) : '—') + '<span class="unit">%</span>';
-  document.getElementById('kpi-csat-sub').innerHTML = `Current fortnight · ${dCurr.length} responses ${deltaBadge(csatC, csatP)}`;
 
-  // Fill rates (window-based, using sent vs responded)
-  const fSent = fAll.filter(r => r._sentDate).length;
-  const fResp = fAll.filter(r => r._feedbackDate && r._score != null).length;
-  const fFill = fSent ? (fResp/fSent*100) : null;
+  if (dCurr.length > 0) {
+    document.getElementById('kpi-csat').innerHTML = (csatC != null ? csatC.toFixed(1) : '—') + '<span class="unit">%</span>';
+    document.getElementById('kpi-csat-sub').innerHTML = `Current fortnight · ${dCurr.length} responses ${deltaBadge(csatC, csatP)}`;
+  } else {
+    const dWin = computeDesign(dAll);
+    document.getElementById('kpi-csat').innerHTML = (dWin.csat != null ? dWin.csat.toFixed(1) : '—') + '<span class="unit">%</span>';
+    document.getElementById('kpi-csat-sub').innerHTML = `No responses this fortnight yet · showing window avg (${dWin.total} resp.)`;
+  }
+
+  // === Final Fill Rate === (Bug 2 fix: use Customer Checklist Signed as eligibility, not Feedback Sent Date)
+  // The CSV mostly only contains responded rows, so sent-vs-responded would give a misleading 100%.
+  // Real eligibility = projects whose Customer Checklist was signed in the window (project is complete and survey-ready).
+  const fEligible = fAll.filter(r => r._checklistDate).length;
+  const fResponded = fAll.filter(r => r._score != null).length;
+  const fFill = fEligible ? (fResponded/fEligible*100) : null;
   document.getElementById('kpi-fill-final').innerHTML = (fFill != null ? fFill.toFixed(1) : '—') + '<span class="unit">%</span>';
-  document.getElementById('kpi-fill-final-sub').textContent = `${fResp.toLocaleString()} of ${fSent.toLocaleString()} surveys sent`;
+  document.getElementById('kpi-fill-final-sub').textContent = `${fResponded.toLocaleString()} of ${fEligible.toLocaleString()} eligible projects`;
 
-  const dSent = dAll.filter(r => r._sentDate || r._feedbackDate).length;
+  // === Design Fill Rate === — uses Survey Sent Date which IS in the file
+  const dSent = dAll.filter(r => r._sentDate).length;
   const dResp = dAll.filter(r => r._rating).length;
   const dFill = dSent ? (dResp/dSent*100) : null;
   document.getElementById('kpi-fill-design').innerHTML = (dFill != null ? dFill.toFixed(1) : '—') + '<span class="unit">%</span>';
-  document.getElementById('kpi-fill-design-sub').textContent = `${dResp.toLocaleString()} of ${dSent.toLocaleString()} eligible`;
+  document.getElementById('kpi-fill-design-sub').textContent = `${dResp.toLocaleString()} of ${dSent.toLocaleString()} surveys sent`;
 }
 
 function deltaBadge(curr, prev) {
@@ -905,26 +924,43 @@ function renderTrendCharts() {
 
   // Design mix donut
   const dMix = computeDesign(dAll);
-  STATE.charts['chart-design-mix'] = new Chart(document.getElementById('chart-design-mix'), {
-    type: 'doughnut',
-    data: {
-      labels: DESIGN_RATINGS,
-      datasets: [{
-        data: DESIGN_RATINGS.map(r => dMix.counts[r] || 0),
-        backgroundColor: ['#2d5d3a', '#5a8a6a', '#b8860b', '#c8612c', '#a8341c'],
-        borderColor: '#f4ede0',
-        borderWidth: 2,
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: {position: 'right', labels: {font: {family:'JetBrains Mono', size: 10}, boxWidth: 10, color:'#0f0e0c'}},
-        tooltip: {bodyFont:{family:'JetBrains Mono'}, titleFont:{family:'Fraunces'}}
+  const canvas = document.getElementById('chart-design-mix');
+  if (dMix.total === 0) {
+    // Bug 3 fix: show clear empty state instead of blank donut
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = 'italic 16px Fraunces, serif';
+    ctx.fillStyle = '#6b6356';
+    ctx.textAlign = 'center';
+    ctx.fillText('No design responses in this window', canvas.width/2, canvas.height/2);
+  } else {
+    STATE.charts['chart-design-mix'] = new Chart(canvas, {
+      type: 'doughnut',
+      data: {
+        labels: DESIGN_RATINGS,
+        datasets: [{
+          data: DESIGN_RATINGS.map(r => dMix.counts[r] || 0),
+          backgroundColor: ['#2d5d3a', '#5a8a6a', '#b8860b', '#c8612c', '#a8341c'],
+          borderColor: '#f4ede0',
+          borderWidth: 2,
+        }]
       },
-      cutout: '60%',
-    }
-  });
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        layout: {padding: 10},
+        plugins: {
+          legend: {position: 'bottom', labels: {font: {family:'JetBrains Mono', size: 10}, boxWidth: 10, color:'#0f0e0c', padding: 10}},
+          tooltip: {
+            bodyFont:{family:'JetBrains Mono'}, titleFont:{family:'Fraunces'},
+            callbacks: {
+              label: (ctx) => `${ctx.label}: ${ctx.parsed} (${(ctx.parsed/dMix.total*100).toFixed(1)}%)`
+            }
+          }
+        },
+        cutout: '55%',
+      }
+    });
+  }
 }
 
 function chartBase({legend=false, stacked=false, y={}}) {
