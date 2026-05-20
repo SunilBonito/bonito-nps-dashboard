@@ -355,12 +355,13 @@
     </div>
   </div>
 
-  <div class="chart-card">
+  <div class="chart-card" id="fortnightChartSection">
     <h3>Fortnight Comparison Chart</h3>
     <div class="chart-sub">last 3 fortnights · grouped by metric</div>
     <div class="chart-wrap" style="height: 280px;"><canvas id="chart-fortnight-compare"></canvas></div>
   </div>
 
+  <div id="momSection">
   <div class="section-head">
     <span class="num">03</span>
     <h2>The Story Month-on-Month</h2>
@@ -391,6 +392,7 @@
     <h3>Eligible vs Responded — Design NPS</h3>
     <div class="chart-sub">Monthly volume · eligibility based on 3D Sign-Off Date</div>
     <div class="chart-wrap tall"><canvas id="chart-volume-design"></canvas></div>
+  </div>
   </div>
 </section>
 
@@ -724,6 +726,13 @@ function chartOpts({legend=false, yMax=null}={}) {
 
 function renderAll() {
   document.getElementById('periodHint').textContent = getWindow().label;
+  // Toggle sections based on window mode:
+  // - Fortnight view: hide MoM section, show fortnight comparison chart
+  // - Other views (3/6/12 Mo, All Time): show MoM section, hide fortnight comparison chart
+  const isFortnight = STATE.windowMode === 'fortnight';
+  document.getElementById('momSection').style.display = isFortnight ? 'none' : '';
+  document.getElementById('fortnightChartSection').style.display = isFortnight ? '' : 'none';
+
   renderAlert(); renderOverview(); renderFortnightCompare(); renderOverall(); renderDesign();
   renderBranches(); renderPeople(); renderDetractors();
 }
