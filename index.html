@@ -115,6 +115,25 @@
   .bar-fill.bad { background: var(--bad); }
 
   .det-list { max-height: 600px; overflow-y: auto; }
+
+  /* Fortnight comparison cards */
+  .fortnight-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .fn-card { background: var(--paper); border: 1px solid var(--ink); padding: 18px; }
+  .fn-card:first-child { background: var(--ink); color: var(--paper); }
+  .fn-card-header { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 10px; margin-bottom: 14px; border-bottom: 1px solid rgba(15,14,12,0.15); }
+  .fn-card:first-child .fn-card-header { border-bottom-color: rgba(244,237,224,0.2); }
+  .fn-card-label { font-family: 'Fraunces', serif; font-style: italic; font-size: 15px; }
+  .fn-card-period { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .fn-card:first-child .fn-card-period { color: var(--paper-2); opacity: 0.7; }
+  .fn-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+  .fn-metric-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+  .fn-card:first-child .fn-metric-label { color: var(--paper-2); opacity: 0.7; }
+  .fn-metric-value { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 400; line-height: 1; letter-spacing: -0.02em; }
+  .fn-unit { font-size: 13px; color: var(--muted); margin-left: 2px; font-style: italic; }
+  .fn-card:first-child .fn-unit { color: var(--paper-2); }
+  .fn-metric-sub { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 3px; }
+  .fn-card:first-child .fn-metric-sub { color: var(--paper-2); opacity: 0.7; }
+  @media (max-width: 1200px) { .fortnight-grid { grid-template-columns: 1fr; } }
   .det-item { padding: 16px 20px; border-bottom: 1px solid rgba(15,14,12,0.08); }
   .det-item:last-child { border-bottom: none; }
   .det-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; }
@@ -147,7 +166,7 @@
 <header class="masthead">
   <div class="masthead-top">
     <div class="meta">
-     
+      
       <span id="todayDate">—</span>
       <span>Bonito Designs</span>
     </div>
@@ -242,6 +261,108 @@
 
   <div class="section-head">
     <span class="num">02</span>
+    <h2>Fortnight at a Glance</h2>
+    <div class="rule"></div>
+    <span class="hint">last 3 rolling fortnights · current is in progress</span>
+  </div>
+
+  <div class="fortnight-grid">
+    <div class="fn-card">
+      <div class="fn-card-header">
+        <span class="fn-card-label">Current Fortnight</span>
+        <span class="fn-card-period" id="fnCurrPeriod">—</span>
+      </div>
+      <div class="fn-metrics">
+        <div class="fn-metric">
+          <div class="fn-metric-label">Overall NPS</div>
+          <div class="fn-metric-value" id="fnCurrOverallNps">—</div>
+          <div class="fn-metric-sub" id="fnCurrOverallSub">—</div>
+        </div>
+        <div class="fn-metric">
+          <div class="fn-metric-label">Overall Fill Rate</div>
+          <div class="fn-metric-value" id="fnCurrOverallFill">—<span class="fn-unit">%</span></div>
+          <div class="fn-metric-sub" id="fnCurrOverallFillSub">—</div>
+        </div>
+        <div class="fn-metric">
+          <div class="fn-metric-label">Design NPS</div>
+          <div class="fn-metric-value" id="fnCurrDesignNps">—</div>
+          <div class="fn-metric-sub" id="fnCurrDesignSub">—</div>
+        </div>
+        <div class="fn-metric">
+          <div class="fn-metric-label">Design Fill Rate</div>
+          <div class="fn-metric-value" id="fnCurrDesignFill">—<span class="fn-unit">%</span></div>
+          <div class="fn-metric-sub" id="fnCurrDesignFillSub">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fn-card">
+      <div class="fn-card-header">
+        <span class="fn-card-label">Previous</span>
+        <span class="fn-card-period" id="fnPrevPeriod">—</span>
+      </div>
+      <div class="fn-metrics">
+        <div class="fn-metric">
+          <div class="fn-metric-label">Overall NPS</div>
+          <div class="fn-metric-value" id="fnPrevOverallNps">—</div>
+          <div class="fn-metric-sub" id="fnPrevOverallSub">—</div>
+        </div>
+        <div class="fn-metric">
+          <div class="fn-metric-label">Overall Fill Rate</div>
+          <div class="fn-metric-value" id="fnPrevOverallFill">—<span class="fn-unit">%</span></div>
+          <div class="fn-metric-sub" id="fnPrevOverallFillSub">—</div>
+        </div>
+        <div class="fn-metric">
+          <div class="fn-metric-label">Design NPS</div>
+          <div class="fn-metric-value" id="fnPrevDesignNps">—</div>
+          <div class="fn-metric-sub" id="fnPrevDesignSub">—</div>
+        </div>
+        <div class="fn-metric">
+          <div class="fn-metric-label">Design Fill Rate</div>
+          <div class="fn-metric-value" id="fnPrevDesignFill">—<span class="fn-unit">%</span></div>
+          <div class="fn-metric-sub" id="fnPrevDesignFillSub">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fn-card">
+      <div class="fn-card-header">
+        <span class="fn-card-label">Two Ago</span>
+        <span class="fn-card-period" id="fnPrev2Period">—</span>
+      </div>
+      <div class="fn-metrics">
+        <div class="fn-metric">
+          <div class="fn-metric-label">Overall NPS</div>
+          <div class="fn-metric-value" id="fnPrev2OverallNps">—</div>
+          <div class="fn-metric-sub" id="fnPrev2OverallSub">—</div>
+        </div>
+        <div class="fn-metric">
+          <div class="fn-metric-label">Overall Fill Rate</div>
+          <div class="fn-metric-value" id="fnPrev2OverallFill">—<span class="fn-unit">%</span></div>
+          <div class="fn-metric-sub" id="fnPrev2OverallFillSub">—</div>
+        </div>
+        <div class="fn-metric">
+          <div class="fn-metric-label">Design NPS</div>
+          <div class="fn-metric-value" id="fnPrev2DesignNps">—</div>
+          <div class="fn-metric-sub" id="fnPrev2DesignSub">—</div>
+        </div>
+        <div class="fn-metric">
+          <div class="fn-metric-label">Design Fill Rate</div>
+          <div class="fn-metric-value" id="fnPrev2DesignFill">—<span class="fn-unit">%</span></div>
+          <div class="fn-metric-sub" id="fnPrev2DesignFillSub">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>Fortnight Comparison Chart</h3>
+    <div class="chart-sub">last 3 fortnights · grouped by metric</div>
+    <div class="chart-wrap" style="height: 280px;"><canvas id="chart-fortnight-compare"></canvas></div>
+  </div>
+
+  <div class="section-head">
+    <span class="num">03</span>
     <h2>The Story Month-on-Month</h2>
     <div class="rule"></div>
     <span class="hint">trend × volume</span>
@@ -603,7 +724,7 @@ function chartOpts({legend=false, yMax=null}={}) {
 
 function renderAll() {
   document.getElementById('periodHint').textContent = getWindow().label;
-  renderAlert(); renderOverview(); renderOverall(); renderDesign();
+  renderAlert(); renderOverview(); renderFortnightCompare(); renderOverall(); renderDesign();
   renderBranches(); renderPeople(); renderDetractors();
 }
 
@@ -620,6 +741,68 @@ function renderAlert() {
   if (alerts.length === 0 && (fillF.rate >= 60 || fillD.rate >= 60))
     alerts.push({type:'good', title:'Healthy fill rates', text:`Most customers are giving feedback — the scores are reliable for ${win.label}.`});
   slot.innerHTML = alerts.map(a => `<div class="alert ${a.type==='good'?'good':''}"><span class="alert-icon">${a.type==='good'?'✓':'⚠'}</span><div><strong>${a.title}</strong><p>${a.text}</p></div></div>`).join('');
+}
+
+function renderFortnightCompare() {
+  // 3 rolling fortnights including the in-progress one.
+  // Example: today = May 20 (in May 2nd half, partial) → show May 16-31 (current), May 1-15, Apr 16-30
+  const curr = currentFortnight();
+  const prev = previousFortnight(curr);
+  const prev2 = previousFortnight(prev);
+
+  document.getElementById('fnCurrPeriod').textContent = fortnightLabel(curr);
+  document.getElementById('fnPrevPeriod').textContent = fortnightLabel(prev);
+  document.getElementById('fnPrev2Period').textContent = fortnightLabel(prev2);
+
+  function statsForFortnight(fn) {
+    const fRows = STATE.finalRows.filter(r => {
+      if (STATE.branchFilter !== 'all' && r._branch !== STATE.branchFilter) return false;
+      return (r._feedbackDate && r._feedbackDate >= fn.start && r._feedbackDate <= fn.end) ||
+             (r._checklistDate && r._checklistDate >= fn.start && r._checklistDate <= fn.end);
+    });
+    const dRows = STATE.designRows.filter(r => {
+      if (STATE.branchFilter !== 'all' && r._branch !== STATE.branchFilter) return false;
+      return (r._feedbackDate && r._feedbackDate >= fn.start && r._feedbackDate <= fn.end) ||
+             (r._signoffDate && r._signoffDate >= fn.start && r._signoffDate <= fn.end);
+    });
+    const fNps = computeNPS(fRows); const fFill = fillRateFinal(fRows);
+    const dNps = computeNPS(dRows); const dFill = fillRateDesign(dRows);
+    return { fNps, fFill, dNps, dFill };
+  }
+
+  function fillCard(prefix, stats) {
+    document.getElementById(prefix + 'OverallNps').textContent = stats.fNps.nps != null ? stats.fNps.nps.toFixed(1) : '—';
+    document.getElementById(prefix + 'OverallSub').textContent = `${stats.fNps.total} response${stats.fNps.total !== 1 ? 's' : ''}`;
+    document.getElementById(prefix + 'OverallFill').innerHTML = (stats.fFill.rate != null ? stats.fFill.rate.toFixed(1) : '—') + '<span class="fn-unit">%</span>';
+    document.getElementById(prefix + 'OverallFillSub').textContent = `${stats.fFill.responded} of ${stats.fFill.eligible} eligible`;
+    document.getElementById(prefix + 'DesignNps').textContent = stats.dNps.nps != null ? stats.dNps.nps.toFixed(1) : '—';
+    document.getElementById(prefix + 'DesignSub').textContent = `${stats.dNps.total} response${stats.dNps.total !== 1 ? 's' : ''}`;
+    document.getElementById(prefix + 'DesignFill').innerHTML = (stats.dFill.rate != null ? stats.dFill.rate.toFixed(1) : '—') + '<span class="fn-unit">%</span>';
+    document.getElementById(prefix + 'DesignFillSub').textContent = `${stats.dFill.responded} of ${stats.dFill.eligible} eligible`;
+  }
+
+  const c = statsForFortnight(curr);
+  const p = statsForFortnight(prev);
+  const p2 = statsForFortnight(prev2);
+
+  fillCard('fnCurr', c);
+  fillCard('fnPrev', p);
+  fillCard('fnPrev2', p2);
+
+  // Grouped bar chart with all 3 fortnights
+  destroy('chart-fortnight-compare');
+  STATE.charts['chart-fortnight-compare'] = new Chart(document.getElementById('chart-fortnight-compare'), {
+    type: 'bar',
+    data: {
+      labels: ['Overall NPS', 'Overall Fill Rate %', 'Design NPS', 'Design Fill Rate %'],
+      datasets: [
+        { label: fortnightLabel(curr), data: [c.fNps.nps, c.fFill.rate, c.dNps.nps, c.dFill.rate], backgroundColor: '#0f0e0c' },
+        { label: fortnightLabel(prev), data: [p.fNps.nps, p.fFill.rate, p.dNps.nps, p.dFill.rate], backgroundColor: '#c2410c' },
+        { label: fortnightLabel(prev2), data: [p2.fNps.nps, p2.fFill.rate, p2.dNps.nps, p2.dFill.rate], backgroundColor: '#d4c5a8' },
+      ]
+    },
+    options: chartOpts({legend: true})
+  });
 }
 
 function renderOverview() {
