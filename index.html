@@ -150,10 +150,86 @@
     .charts-row { grid-template-columns: 1fr; }
     .kpi-value { font-size: 42px; }
   }
-  @media (max-width: 600px) {
-    body { padding: 20px 16px 60px; }
+
+  /* Mobile — phones */
+  @media (max-width: 768px) {
+    body { padding: 16px 12px 50px; }
+
+    /* Masthead */
+    .masthead { padding-bottom: 12px; margin-bottom: 16px; }
+    .masthead-top { flex-direction: column; gap: 6px; align-items: flex-start; margin-bottom: 8px; }
+    .masthead-top .meta { gap: 12px; flex-wrap: wrap; font-size: 9px; }
+    h1.title { font-size: 36px; line-height: 1; }
+    .tagline { font-size: 13px; margin-top: 6px; }
+
+    /* Controls — stack and shrink */
+    .controls { gap: 8px; margin: 14px 0 12px; }
+    .seg { width: 100%; }
+    .seg button { flex: 1; padding: 8px 6px; font-size: 10px; letter-spacing: 0.05em; }
+    select.filter { width: 100%; padding: 9px 28px 9px 12px; }
+    .ghost { flex: 1; padding: 9px 8px; font-size: 10px; letter-spacing: 0.05em; }
+
+    /* Tabs — scroll horizontally instead of wrapping */
+    .tab-bar { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; margin: 0 -12px 16px; padding: 0 12px; }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-bar button { font-size: 14px; padding: 9px 12px 11px; white-space: nowrap; flex-shrink: 0; }
+    .tab-bar .count { font-size: 9px; }
+
+    /* Section heads */
+    .section-head { margin: 22px 0 10px; gap: 10px; flex-wrap: wrap; }
+    .section-head h2 { font-size: 19px; }
+    .section-head .rule { display: none; }
+    .section-head .hint { font-size: 9px; }
+
+    /* KPI cards — single column */
     .kpi-grid { grid-template-columns: 1fr; }
-    h1.title { font-size: 40px; }
+    .kpi { min-height: auto; padding: 16px; }
+    .kpi-value { font-size: 38px; margin-top: 8px; }
+    .kpi-value .unit { font-size: 16px; }
+    .kpi-sub { margin-top: 8px; font-size: 9px; }
+
+    /* Fortnight cards */
+    .fn-card { padding: 14px; }
+    .fn-metrics { gap: 12px 14px; }
+    .fn-metric-value { font-size: 22px; }
+    .fn-metric-label { font-size: 8px; }
+    .fn-card-label { font-size: 14px; }
+
+    /* Chart cards */
+    .chart-card { padding: 14px; }
+    .chart-card h3 { font-size: 15px; }
+    .chart-card .chart-sub { font-size: 9px; }
+    .chart-wrap, .chart-wrap.tall { height: 220px; }
+
+    /* Tables */
+    .table-card { overflow: hidden; }
+    .table-head { padding: 12px 14px; }
+    .table-head h3 { font-size: 15px; }
+    table.data { font-size: 11px; }
+    table.data th { padding: 8px 8px; font-size: 9px; letter-spacing: 0.05em; }
+    table.data td { padding: 9px 8px; }
+    /* Wrap wide tables in horizontal scroll */
+    #branch-table, #people-table { display: block; overflow-x: auto; white-space: nowrap; -webkit-overflow-scrolling: touch; }
+
+    /* Detractors */
+    .det-item { padding: 12px 14px; }
+    .det-top { gap: 8px; }
+    .det-customer { font-size: 14px; }
+    .det-meta { font-size: 10px; }
+    .det-comment { font-size: 13px; padding-left: 10px; }
+
+    /* Alert banner */
+    .alert { padding: 10px 12px; }
+    .alert strong { font-size: 13px; }
+    .alert p { font-size: 12px; }
+  }
+
+  /* Small phones */
+  @media (max-width: 380px) {
+    h1.title { font-size: 30px; }
+    .fn-metrics { grid-template-columns: 1fr; }
+    .kpi-value { font-size: 32px; }
+    .fn-metric-value { font-size: 20px; }
   }
 
   ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -166,7 +242,7 @@
 <header class="masthead">
   <div class="masthead-top">
     <div class="meta">
-      
+     
       <span id="todayDate">—</span>
       <span>Bonito Designs</span>
     </div>
