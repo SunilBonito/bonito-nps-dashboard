@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Bonito Designs — NPS Intelligence</title>
+<title>Bonito Designs - NPS Intelligence</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -552,8 +552,32 @@ function fmtPct(n) { return n == null || isNaN(n) ? '—' : n.toFixed(1) + '%'; 
 function parseDate(s) {
   if (!s) return null;
   const t = String(s).trim(); if (!t) return null;
+
+  // Indian format: DD-MM-YYYY or DD/MM/YYYY (Pulse system default)
+  // Also handles ISO format: YYYY-MM-DD
+  const m1 = t.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/);
+  if (m1) {
+    const day = parseInt(m1[1]), month = parseInt(m1[2]), year = parseInt(m1[3]);
+    // Sanity: day 1-31, month 1-12, year sensible
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year > 2015 && year < 2100) {
+      return new Date(year, month - 1, day);
+    }
+  }
+
+  // ISO format: YYYY-MM-DD
+  const m2 = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m2) {
+    const year = parseInt(m2[1]), month = parseInt(m2[2]), day = parseInt(m2[3]);
+    if (day >= 1 && day <= 31 && month >= 1 && month <= 12 && year > 2015 && year < 2100) {
+      return new Date(year, month - 1, day);
+    }
+  }
+
+  // Last resort: try native parsing (handles things like "2026-04-11 14:30:00")
   const d = new Date(t);
-  if (!isNaN(d.getTime()) && d.getFullYear() > 2015 && d.getFullYear() < 2100) return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  if (!isNaN(d.getTime()) && d.getFullYear() > 2015 && d.getFullYear() < 2100) {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  }
   return null;
 }
 function ymKey(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0'); }
